@@ -3,6 +3,433 @@
 <head>
     <meta charset="UTF-8">
     <title>Double Burden Index (DBI) Calculator by Phadke, Gautam, Nair and Rade, 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        /* Frozen Shell Layout */
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: Arial, sans-serif; background-color: #f8f9fa; 
+               -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+        body { display: flex; flex-direction: column; }
+        
+        /* Sticky Header Group */
+        .sticky-top { flex: 0 0 auto; padding: 10px 10px 0 10px; background-color: #f8f9fa; z-index: 1000; }
+        .header-title { background-color: #4285f4; color: white; padding: 12px; text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 0; border-radius: 4px; transition: background-color 0.3s;}
+        
+        /* Dynamic Tabs */
+        .tab-container { margin-bottom: 0; margin-top: 8px; display: flex; width: 100%; }
+        .tab-btn { flex: 1; background-color: #e0e0e0; border: 1px solid #ccc; border-bottom: none; padding: 10px; cursor: pointer; font-size: 15px; font-weight: bold; border-radius: 8px 8px 0 0; text-align: center; margin-right: 4px; transition: all 0.2s ease;}
+        .tab-btn:last-child { margin-right: 0; }
+        .tab-btn:hover { background-color: #d5d5d5; }
+        
+        /* INSTANT TAB SWITCHING & SCROLLABLE INSIDES */
+        .tab-wrapper { flex: 1 1 auto; position: relative; margin: 0 10px 10px 10px; }
+        .tab-content { 
+            position: absolute; inset: 0;
+            visibility: hidden; opacity: 0; pointer-events: none;
+            background: #f4f7fe; padding: 15px; border: 2px solid #4285f4; border-top: none; border-radius: 0 0 8px 8px; box-sizing: border-box;
+            overflow-y: auto; overflow-x: hidden; transition: opacity 0.1s;
+        }
+        .tab-content.active { 
+            visibility: visible; opacity: 1; pointer-events: auto; display: flex; flex-direction: column;
+        }
+
+        /* Scrollable Data Area */
+        .table-scroll-container { flex: 1 1 auto; overflow-y: auto; border: 1px solid #ccc; background: white; margin-bottom: 10px; min-height: 0;}
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; background: white;}
+        th, td { border: 1px solid #ccc; padding: 5px; text-align: center; font-size: 11px; word-wrap: break-word; overflow: hidden; }
+        #spreadsheet tbody tr { content-visibility: auto; contain-intrinsic-size: 32px; }
+        
+        #spreadsheet thead tr th { position: sticky; top: 0; z-index: 10; background-color: #1976d2; color: white; }
+        #spreadsheet thead tr:first-child th { top: 0; }
+        #spreadsheet thead tr:nth-child(2) th { top: 31px; } 
+
+        #spreadsheet tbody tr:nth-child(even) { background-color: #eaf1fb; } 
+        #spreadsheet tbody tr:nth-child(odd) { background-color: #ffffff; }
+        
+        input, select { width: 100%; box-sizing: border-box; padding: 4px 2px; font-size: 11px; background-color: rgba(255,255,255,0.8); border-radius: 3px; border: 1px solid #bbb;}
+        input[type="date"] { font-size: 10px; letter-spacing: -0.5px; padding: 4px 0px; } 
+        
+        .col-sn { width: 3.5%; } .col-fac { width: 9%; } .col-child { width: 9%; } .col-date { width: 11.5%; } .col-age { width: 3%; } .col-gen { width: 4%; } .col-wt { width: 4.5%; } .col-ht { width: 4.5%; } .col-z { width: 3.5%; }  .col-stat { width: 6.5%; } .col-dbi { width: 11%; }
+        .dbi-cat { font-weight: normal !important; } .status-cell { font-weight: bold; }
+
+        /* Unified Pagination Controls */
+        .pagination-container { flex: 0 0 auto; display: flex; flex-direction: row; justify-content: space-between; align-items: center; background: #e3f2fd; padding: 10px 15px; border: 1px solid #90caf9; border-radius: 4px; margin-bottom: 10px; }
+        #pageInfoText { font-weight: bold; font-size: 13px; color: #1976d2; flex: 1; text-align: left; }
+        #pageNumbers { flex: 2; display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; align-items: center;}
+        .page-num-btn { background: white; color: #1976d2; border: 1px solid #90caf9; padding: 4px 10px; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 12px; transition: 0.2s;}
+        .page-num-btn:hover:not(:disabled) { background: #bbdefb; }
+        .page-num-btn.active { background: #1976d2; color: white; border-color: #1976d2; cursor: default; }
+        .page-num-btn:disabled { color: #aaa; border-color: #ddd; cursor: not-allowed; }
+        .add-row-btn { flex: 1; text-align: right; }
+
+        #summaryBody tr:nth-child(even) { background-color: #f2f9f4; }
+        #summaryBody tr:nth-child(odd) { background-color: #ffffff; }
+
+        .bulk-import-container { flex: 0 0 auto; background: #e8f0fe; padding: 10px; margin-top: 5px; border: 1px solid #4285f4; border-radius: 5px; font-size: 13px; display: flex; flex-direction: column; gap: 10px;}
+
+        /* Summary Dashboard Layout */
+        .summary-top-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; align-items: stretch; }
+        .summary-column { flex: 1; min-width: 400px; display: flex; flex-direction: column; }
+        .chart-container { flex: 1; min-width: 400px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: stretch; }
+        .chart-wrapper { position: relative; width: 100%; flex-grow: 1; margin-top: 10px; display: flex; align-items: center; justify-content: center;}
+        .summary-bottom-row { width: 100%; }
+        .summary-table th, .summary-table td { padding: 8px; font-size: 13px; }
+        .summary-table { flex-grow: 1; display: flex; flex-direction: column; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
+        
+        .header-with-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; }
+        .export-btn { background-color: #4caf50; color: white; border: none; padding: 5px 12px; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 12px; transition: background 0.2s; white-space: nowrap; }
+        .export-btn:hover { background-color: #388e3c; }
+        .dl-link { color: #1976d2; font-weight: bold; text-decoration: underline; cursor: pointer; transition: color 0.2s; display: block; width: 100%; height: 100%;}
+        .dl-link:hover { color: #d32f2f; }
+
+        /* --- GRAPHS TAB CSS --- */
+        .exclusion-toggle-bar { display: flex; flex-direction: row; justify-content: space-between; align-items: center; background: white; padding: 12px 20px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); white-space: nowrap; }
+        .toggle-options { display: flex; gap: 20px; align-items: center; font-size: 15px; color: #673ab7; font-weight: bold; margin-right: auto; white-space: nowrap;}
+        .toggle-options label { cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .toggle-options input[type="radio"] { transform: scale(1.2); cursor: pointer; margin: 0;}
+
+        .stat-section-title { width: 100%; font-size: 18px; font-weight: 800; color: #673ab7; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-section { display: flex; flex-direction: row; height: 480px; max-height: 480px; gap: 20px; background: #fdfdfd; border: 1px solid #ccc; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .stat-chart-container { width: 55%; height: 100%; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box;}
+        .stat-text-container { width: 45%; height: 100%; overflow: hidden; background: #ffffff; border: 1px solid #bdbdbd; border-radius: 5px; padding: 20px; box-shadow: inset 0 0 5px rgba(0,0,0,0.02); box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;}
+        .stats-grid-table { width: 100%; border-collapse: collapse; font-family: "Courier New", Courier, monospace; font-size: 12.5px; font-weight: 700; color: #000; line-height: 1.5; }
+        .stats-grid-table td { padding: 4px 0; vertical-align: top; border-bottom: 1px dashed #eee; }
+        .stats-grid-table tr:last-child td { border-bottom: none; }
+        .stats-footer-text { font-family: "Courier New", Courier, monospace; font-size: 13.5px; font-weight: 700; color: #000; margin-top: 15px; }
+
+        .scatter-container { width: 100%; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); box-sizing: border-box;}
+        .scatter-wrapper { position: relative; width: 100%; height: 750px; margin-top: 15px; background-color: #f9f9f9; border: 1px solid #e0e0e0; overflow: hidden; box-sizing: border-box;}
+        .exclusion-footer { background: #ede7f6; border-left: 5px solid #673ab7; padding: 15px; margin-top: 20px; font-size: 13px; color: #333; line-height: 1.6; border-radius: 0 4px 4px 0;}
+
+        /* Guide Grid */
+        .guide-grid-2, .guide-grid-3 { display: grid; gap: 20px; margin-bottom: 20px; }
+        @media(min-width: 800px) { .guide-grid-2 { grid-template-columns: 1fr 1fr; } .guide-grid-3 { grid-template-columns: 1fr 1fr 1fr; } }
+        .guide-box { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 14px; line-height: 1.6; color: #333;}
+        .guide-box h2, .guide-box h3 { margin-top: 0; color: #e91e63; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 18px;}
+        .tech-note { background-color: #fce4ec; border-left: 5px solid #e91e63; padding: 20px; margin-top: 20px; font-size: 14px; line-height: 1.6; border-radius: 0 8px 8px 0;}
+        .tech-note h3 { margin-top: 0; color: #c2185b; border-bottom: none; font-size: 18px;}
+        .contact-box { background-color: #f8bbd0; color: #880e4f; padding: 15px; margin-top: 20px; text-align: center; border-radius: 8px; border: 1px solid #f48fb1; font-size: 14px; line-height: 1.5; }
+        .copyright-notice { font-size: 13px; color: #880e4f; background-color: #fce4ec; text-align: center; margin-top: 20px; padding: 15px; border: 1px solid #f8bbd0; border-radius: 8px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+
+        /* -------------------------------------------------------------
+           FORMAL HIDDEN PRINT REPORT ARCHITECTURE 
+           ------------------------------------------------------------- */
+        #formalPrintReport { display: none; background: white; color: black; font-family: "Times New Roman", Times, serif; }
+        
+        @media print {
+            body, html { height: auto !important; overflow: visible !important; background: white !important;}
+            /* Hide the website */
+            .sticky-top, .tab-container, .tab-wrapper { display: none !important; }
+            
+            /* Show the formal report */
+            #formalPrintReport { display: block !important; padding: 0 20px; }
+            
+            .report-title { text-align: center; color: #2e7d32; font-size: 26px; font-weight: bold; text-transform: uppercase; border-bottom: 3px solid #2e7d32; padding-bottom: 15px; margin-bottom: 20px; }
+            .report-header-info { text-align: center; font-size: 14px; margin-bottom: 30px; font-style: italic; }
+            
+            .report-section-title { font-size: 18px; color: #1976d2; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 35px; margin-bottom: 15px; font-weight: bold; page-break-after: avoid;}
+            
+            .exec-summary { font-size: 15px; line-height: 1.6; text-align: justify; margin-bottom: 20px; }
+            
+            /* Tree Diagram */
+            .tree-diagram { display: flex; flex-direction: column; align-items: center; margin: 30px 0; page-break-inside: avoid;}
+            .tree-box { border: 2px solid #2e7d32; padding: 12px 25px; border-radius: 6px; font-weight: bold; font-family: Arial, sans-serif; text-align: center; background: #f2f9f4; min-width: 250px; font-size: 14px;}
+            .tree-box.error { border-color: #d32f2f; background: #ffebee; }
+            .tree-box.final { border-color: #1976d2; background: #e3f2fd; font-size: 16px; border-width: 3px; }
+            .tree-arrow { width: 2px; height: 25px; background: #333; position: relative; margin: 2px 0;}
+            .tree-arrow::after { content: ''; position: absolute; bottom: 0; left: -4px; border-width: 6px 5px 0; border-style: solid; border-color: #333 transparent transparent transparent; }
+
+            /* Report Tables */
+            .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-family: Arial, sans-serif; font-size: 12px; page-break-inside: avoid; }
+            .report-table th, .report-table td { border: 1px solid #444; padding: 8px 6px; text-align: center; }
+            .report-table th { background-color: #f5f5f5; font-weight: bold; }
+            .report-table td:nth-child(2), .report-table td:nth-child(3) { text-align: left; } /* Align Category/Definition Left */
+            
+            .note-box { font-size: 11px; line-height: 1.4; color: #444; background: #f9f9f9; padding: 10px; border: 1px solid #ddd; margin-bottom: 20px; text-align: justify;}
+            
+            .chart-print-container { width: 100%; text-align: center; margin-bottom: 20px; page-break-inside: avoid; height: 350px;}
+            .chart-print-container img { max-width: 85%; max-height: 350px; object-fit: contain;}
+        }
+    </style>
+</head>
+<body>
+
+    <!-- VISUAL WEBSITE UI -->
+    <div class="sticky-top">
+        <div class="header-title" id="mainHeaderTitle">Double Burden Index (DBI) Calculator by Phadke, Gautam, Nair and Rade, 2026</div>
+
+        <div class="tab-container">
+            <button class="tab-btn active" id="btn-dataEntry" onclick="switchTab('dataEntry', '#4285f4', '#f4f7fe')" style="border-top: 4px solid #4285f4; color: #4285f4; background-color: #f4f7fe;">DBI Calculator</button>
+            <button class="tab-btn" id="btn-summary" onclick="switchTab('summary', '#2e7d32', '#f2f9f4')">DBI Summary</button>
+            <button class="tab-btn" id="btn-stats" onclick="switchTab('stats', '#673ab7', '#ede7f6')">Graphs</button>
+            <button class="tab-btn" id="btn-guide" onclick="switchTab('guide', '#e91e63', '#fce4ec')">User Guide</button>
+        </div>
+    </div>
+
+    <div class="tab-wrapper">
+        <!-- TAB 1: Data Entry -->
+        <div id="dataEntry" class="tab-content active" style="border-color: #4285f4; background-color: #f4f7fe;">
+            <div class="table-scroll-container">
+                <table id="spreadsheet">
+                    <thead>
+                        <tr>
+                            <th colspan="9" style="background-color: #1976d2; color: white; padding: 8px; font-size: 13px;">
+                                <div style="display: flex; align-items: center; position: relative;">
+                                    <button class="export-btn" onclick="exportCalculatedDataToCSV()" title="Download Entered Data & Results" style="position: absolute; left: 0;">📥 Export Data (CSV)</button>
+                                    <span style="flex-grow: 1; text-align: center;">*Data Entry Cells - (Compulsory)*</span>
+                                </div>
+                            </th>
+                            <th colspan="7" style="background-color: #0d47a1; color: white; padding: 8px; font-size: 13px;">*Automatic output for the classification of malnutrition and DBI*</th>
+                        </tr>
+                        <tr>
+                            <th class="col-sn">SN</th><th class="col-fac">Doctor / Facility Name</th><th class="col-child">Name of Child</th><th class="col-date">Survey Date<br>(MM/DD/YYYY)</th><th class="col-date">Birth Date<br>(MM/DD/YYYY)</th><th class="col-age">Age<br>(Months)</th><th class="col-gen">Gender<br>(m/f)</th><th class="col-wt">Weight<br>(kg)</th><th class="col-ht">Height<br>(cm)</th><th class="col-z">Z Score<br>(WAZ)</th><th class="col-stat">Weight For<br>Age Status</th><th class="col-z">Z Score<br>(HAZ)</th><th class="col-stat">Height For<br>Age Status</th><th class="col-z">Z Score<br>(WHZ)</th><th class="col-stat">Weight<br>For Height</th><th class="col-dbi">Double-Burden Index (DBI)<br>Category</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Rows injected via Virtual Memory Engine -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination-container">
+                <div id="pageInfoText">Page 1 of 1</div>
+                <div id="pageNumbers"></div>
+                <div class="add-row-btn"><button onclick="addRow()" style="padding: 6px 12px; background-color: #4285f4; color: white; border: none; cursor:pointer; font-weight:bold; border-radius: 4px; font-size: 12px;">+ Add Single Row</button></div>
+            </div>
+
+            <div class="bulk-import-container">
+                <div>
+                    <strong>Bulk CSV File Upload (Optimized for 300,000+ entries):</strong> Save your massive Excel dataset as a <strong>.csv (Comma delimited)</strong> file. Ensure your columns are arranged in exactly this order without missing any headers:
+                    <div style="display: flex; gap: 5px; margin: 8px 0; font-weight: bold; color: #1976d2; flex-wrap: wrap;">
+                        <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Doctor/Facility Name</span>
+                        <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Name of Child</span>
+                        <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Survey Date</span>
+                        <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Birth Date</span>
+                        <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Gender (m/f)</span>
+                        <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Weight (kg)</span>
+                        <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Height (cm)</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <input type="file" id="csvFileInput" accept=".csv" style="width: auto; padding: 5px;">
+                    <button onclick="processCSV()" style="background-color: #1976d2; color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 13px;">Upload & Process CSV Data</button>
+                    <span id="uploadProgress" style="font-weight: bold; color: #d32f2f;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Summary Dashboard -->
+        <div id="summary" class="tab-content" style="border-color: #2e7d32; background-color: #f2f9f4;">
+            <div class="summary-top-row">
+                <div class="summary-column">
+                    <div class="summary-table">
+                        <div class="header-with-btn">
+                            <h3 style="margin: 0; color: #2e7d32; font-size: 15px;">Classification Table</h3>
+                            <button class="export-btn" onclick="exportTableToCSV()" style="background-color: #2e7d32;">📥 Download Table (CSV)</button>
+                        </div>
+                        <table style="background: white; height: 100%; border-collapse: collapse;" id="exportTable">
+                            <thead><tr><th style="background-color: #2e7d32; color:white;">Category</th><th style="background-color: #2e7d32; color:white;">Nutritional Classification</th><th style="background-color: #2e7d32; color:white;">Count</th><th style="background-color: #2e7d32; color:white;">%</th></tr></thead>
+                            <tbody id="summaryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="header-with-btn">
+                        <h3 style="margin: 0; color: #2e7d32; font-size: 15px;">Cohort Summary - Double Burden Index</h3>
+                        <button class="export-btn" onclick="exportChartAsPNG('dbiChart', 'DBI_Cohort_Chart.png')" style="background-color: #2e7d32;">📥 Download Chart (PNG)</button>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="dbiChart"></canvas></div>
+                </div>
+            </div>
+            
+            <div class="summary-bottom-row">
+                <table style="background: white; width: 100%; border-collapse: collapse;">
+                    <tbody id="secondarySummaryBody"></tbody>
+                </table>
+                <p style="font-size: 12px; color: #555; font-style: italic; margin-top: 10px;">* Click on the blue numbers in the tables above to directly download the filtered CSV list of those specific children.</p>
+            </div>
+        </div>
+
+        <!-- TAB 3: GRAPHS -->
+        <div id="stats" class="tab-content" style="border-color: #673ab7; background-color: #ede7f6;">
+            
+            <div class="exclusion-toggle-bar">
+                <div class="toggle-options">
+                    <span>Analysis Data Mode:</span>
+                    <label><input type="radio" name="exclToggle" id="toggleTotal" value="total" checked onchange="generatePopulationStats()"> Total (No Exclusion)</label>
+                    <label><input type="radio" name="exclToggle" id="toggleExcl" value="exclude" onchange="generatePopulationStats()"> Excluding WHO Flags</label>
+                </div>
+                <!-- TRIGGER REPORT GENERATION -->
+                <button class="export-btn" style="background-color: #673ab7; font-size: 14px; padding: 8px 15px;" onclick="preparePrintReport()">🖨️ Download Detailed PDF Report</button>
+            </div>
+
+            <!-- Section 1: WAZ -->
+            <div class="stat-section-title">SECTION 1: WEIGHT-FOR-AGE Z-SCORE (WAZ)</div>
+            <div class="stat-section">
+                <div class="stat-chart-container"><canvas id="wazChart"></canvas></div>
+                <div class="stat-text-container" id="wazStatsText">Loading statistics...</div>
+            </div>
+
+            <!-- Section 2: HAZ -->
+            <div class="stat-section-title">SECTION 2: HEIGHT-FOR-AGE Z-SCORE (HAZ)</div>
+            <div class="stat-section">
+                <div class="stat-chart-container"><canvas id="hazChart"></canvas></div>
+                <div class="stat-text-container" id="hazStatsText">Loading statistics...</div>
+            </div>
+
+            <!-- Section 3: WHZ -->
+            <div class="stat-section-title">SECTION 3: WEIGHT-FOR-HEIGHT Z-SCORE (WHZ)</div>
+            <div class="stat-section">
+                <div class="stat-chart-container"><canvas id="whzChart"></canvas></div>
+                <div class="stat-text-container" id="whzStatsText">Loading statistics...</div>
+            </div>
+
+            <!-- Section 4: DBI Scatter Plot -->
+            <div class="scatter-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ede7f6; padding-bottom: 8px; margin-bottom: 10px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #673ab7; text-transform: uppercase;">CONCEPTUAL DENSITY PLOT - DOUBLE BURDEN INDEX</div>
+                    <button class="export-btn" onclick="exportChartAsPNG('scatterChart', 'DBI_Conceptual_Density_Plot.png')" style="background-color: #673ab7;">📥 Download Chart (PNG)</button>
+                </div>
+                <div class="scatter-wrapper"><canvas id="scatterChart"></canvas></div>
+                <div class="exclusion-footer">
+                    <strong>Statistical & Plotting Notes:</strong><br><br>
+                    • Toggle the <strong>"Analysis Data Mode"</strong> at the top of the tab to universally include or exclude flagged outliers from all graphs and tables.<br>
+                    • <strong>Exclusion Criteria (As per WHO Reference):</strong> Data points falling outside the WHO biological plausibility limits are flagged as "out of range" and are excluded when toggled. The limits are: WAZ < -6 or > 5; HAZ < -6 or > 6; WHZ < -5 or > 5.<br>
+                    • The Framework represents the linear mathematical relationship between Weight-for-Age (Y-Axis), Height-for-Age (X-Axis), and Weight-for-Height (Diagonals) originating around the clinical -2 SD intercepts.
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: User Guide -->
+        <div id="guide" class="tab-content" style="border-color: #e91e63; background-color: #fce4ec;">
+            <div class="guide-grid-2">
+                <div class="guide-box">
+                    <h2>Standard Operating Procedures (SoP)</h2>
+                    <p><strong>Step 1:</strong> Open the web tool... You must enter all data on the tab named <strong>DBI Calculator</strong>.</p>
+                    <p><strong>Step 2:</strong> Type <strong>Doctor</strong> or Facility Name.</p>
+                    <p><strong>Step 3:</strong> Type the <strong>name</strong> of the child.</p>
+                    <p><strong>Step 4:</strong> Enter <strong>Survey date</strong> (MM/DD/YYYY format).</p>
+                    <p><strong>Step 5:</strong> Enter <strong>Birth date</strong> (MM/DD/YYYY format).</p>
+                    <p><strong>Step 6:</strong> Enter <strong>Gender</strong> (m or f).</p>
+                    <p><strong>Step 7:</strong> Enter <strong>Weight</strong> (kg).</p>
+                    <p><strong>Step 8:</strong> Enter <strong>Height</strong> (cm) and press Enter or click outside the box.</p>
+                </div>
+                <div class="guide-box">
+                    <h2>Guide for Bulk CSV Import (Open Version)</h2>
+                    <p>This open version uses advanced browser multi-threading to process up to 300,000 children instantly from a CSV file without freezing your screen.</p>
+                    <ol>
+                        <li style="margin-bottom: 8px;"><strong>Prepare your Excel file:</strong> Ensure your data is arranged in exactly these 7 columns in this specific order: <em>Doctor/Facility Name, Name of Child, Survey Date, Birth Date, Gender (m/f), Weight (kg), Height (cm)</em>. Delete any title/header rows.</li>
+                        <li style="margin-bottom: 8px;"><strong>Save as CSV:</strong> Go to File > Save As, and choose <strong>CSV (Comma delimited)</strong> format.</li>
+                        <li style="margin-bottom: 8px;"><strong>Upload into the tool:</strong> Go to the <strong>DBI Calculator</strong> tab and scroll to the bottom. Click "Choose File" under the Bulk CSV Upload section and select your file.</li>
+                        <li><strong>Process:</strong> Click the blue <strong>Upload & Process CSV Data</strong> button. The tool will calculate all formulas in the background and notify you when finished.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="tech-note">
+                <h3>Technical Note: Calculation Assumptions</h3>
+                <p><strong>DBI Classification Limits:</strong> DBI classification uses a Z‑score less than −2 to classify low weight-for-age as “underweight”, low length/height-for-age as “stunted”, and low weight-for-length as “wasted”. Similarly a Z‑score above +2 is used to classify weight-for-height as “Overweight/Obesity”.</p>
+                <p><strong>LMS Method:</strong> The computation of percentiles and z-scores for all three indicators uses formulae based on the LMS method given by Cole and Green in 1992, matching WHO Anthro software.</p>
+                <p><strong>Age Limit:</strong> Tool will not function for children > 5 years (>59 months) per WHO 2006 standards.</p>
+                <p><strong>Minimum Length:</strong> No classification for length < 45 cm per WHO standards.</p>
+            </div>
+            <div class="copyright-notice">
+                &copy; 2026 Phadke, Gautam, Nair, and Rade. All rights reserved. The underlying methodology, logic, and interface may not be reproduced, copied, or distributed without explicit written permission.
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         HIDDEN FORMAL REPORT ENGINE (ONLY VISIBLE ON PRINT/PDF)
+         ========================================================= -->
+    <div id="formalPrintReport">
+        <div class="report-title">Summary Analysis Report for Double Burden Index</div>
+        <div class="report-header-info" id="reportHeaderDate"></div>
+        
+        <div class="report-section-title">Executive Summary</div>
+        <div class="exec-summary" id="reportExecSummary">Loading summary...</div>
+        
+        <div class="tree-diagram" id="reportTreeDiagram"></div>
+        
+        <div class="report-section-title">Double Burden Index (DBI) Findings</div>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">SN</th>
+                    <th style="width: 8%;">Category</th>
+                    <th style="width: 45%;">Definition</th>
+                    <th style="width: 20%;">Prevalence N (%)</th>
+                    <th style="width: 22%;">95% C.I.</th>
+                </tr>
+            </thead>
+            <tbody id="reportDBITableBody"></tbody>
+        </table>
+        
+        <div class="note-box">
+            <strong>Note:</strong> 
+            <strong>Underweight:</strong> Defined as having a weight-for-age z-score more than 2 standard deviations (SD) below the median of the WHO child growth standards. 
+            <strong>Stunting:</strong> Defined as having a height or length-for-age z-score more than 2 SD below the median. 
+            <strong>Wasting:</strong> Defined as having a weight-for-length/height z-score more than 2 SD below the median. 
+            <strong>Overweight/Obesity:</strong> Defined as having a weight-for-length/height z-score more than 2 SD above the median.
+        </div>
+
+        <div style="page-break-before: always;"></div>
+        
+        <div class="report-section-title">1. Weight-for-Age (WAZ) - Underweight Analysis</div>
+        <div class="chart-print-container"><img id="printWazImg" src="" /></div>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Group</th><th>N</th><th>Total Underweight (<-2 SD)</th><th>Moderate Underweight (<-2 and >=-3 SD)</th><th>Severe Underweight (<-3 SD)</th>
+                </tr>
+            </thead>
+            <tbody id="reportWazTableBody"></tbody>
+        </table>
+
+        <div style="page-break-before: always;"></div>
+
+        <div class="report-section-title">2. Height-for-Age (HAZ) - Stunting Analysis</div>
+        <div class="chart-print-container"><img id="printHazImg" src="" /></div>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Group</th><th>N</th><th>Total Stunting (<-2 SD)</th><th>Moderate Stunting (<-2 and >=-3 SD)</th><th>Severe Stunting (<-3 SD)</th>
+                </tr>
+            </thead>
+            <tbody id="reportHazTableBody"></tbody>
+        </table>
+
+        <div style="page-break-before: always;"></div>
+
+        <div class="report-section-title">3. Weight-for-Height (WHZ) - Wasting & Obesity Analysis</div>
+        <div class="chart-print-container"><img id="printWhzImg" src="" /></div>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Group</th><th>N</th><th>Total Wasting (<-2 SD)</th><th>Severe Wasting (<-3 SD)</th><th>Overweight (>+2 SD)</th><th>Obesity (>+3 SD)</th>
+                </tr>
+            </thead>
+            <tbody id="reportWhzTableBody"></tbody>
+        </table>
+
+        <div class="note-box" style="margin-top: 30px;">
+            <strong>Methodology & Criteria Followed:</strong><br>
+            All calculations, standard deviations, and definitions applied in this report conform strictly to the <strong>WHO Child Growth Standards (2006)</strong>. 
+            The dataset presented herein explicitly <strong>excludes WHO Biological Plausibility Flags</strong> (WAZ < -6 or > 5; HAZ < -6 or > 6; WHZ < -5 or > 5) to guarantee the highest epidemiological accuracy and prevent data-entry outliers from skewing the true clinical prevalence.
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
+    // ==========================================
+    // 1. INSERT YOUR WHO JSON DATA HERE
+    // ==========================================
+    
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Double Burden Index (DBI) Calculator by Phadke, Gautam, Nair and Rade, 2026</title>
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- PapaParse for high-speed massive CSV reading -->
@@ -148667,6 +149094,939 @@
         
         let header = '"SN","Facility","Child Name","Survey Date","Birth Date","Age (Months)","Gender","Weight","Height","WAZ Z","WAZ Status","HAZ Z","HAZ Status","WHZ Z","WHZ Status","DBI Category"';
         let csvFile = new Blob([[header, ...csv].join("\n")], { type: "text/csv" }); let downloadLink = document.createElement("a"); downloadLink.download = "DBI_Calculated_Data.csv"; downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
+    }
+</script>
+</body>
+</html>
+
+    // ==========================================
+
+    let chartInstance = null;
+    let wazChartInst = null, hazChartInst = null, whzChartInst = null, scatterChartInst = null;
+
+    let globalData = [];
+    let currentPage = 1;
+    const rowsPerPage = 500;
+
+    const catColors = {
+        "A": "#4caf50", "B": "#e53935", "C": "#ff9800", "D": "#b71c1c", "E": "#ffeb3b", 
+        "F": "#00bcd4", "G": "#03a9f4", "H": "#9c27b0", "I": "#e91e63", "J": "#795548"
+    };
+
+    window.onload = () => { 
+        for(let i=1; i<=10; i++) { globalData.push(createEmptyRow(i)); }
+        renderTable();
+    };
+
+    function switchTab(tabId, themeColor, bgColor) {
+        document.querySelectorAll('.tab-content').forEach(tab => { tab.classList.remove('active'); });
+        document.querySelectorAll('.tab-btn').forEach(btn => { btn.classList.remove('active'); btn.style.borderTop = 'none'; btn.style.color = 'black'; btn.style.backgroundColor = '#e0e0e0'; });
+        
+        document.getElementById(tabId).classList.add('active'); 
+        
+        let activeBtn = document.getElementById('btn-' + tabId);
+        if(activeBtn) {
+            activeBtn.classList.add('active'); activeBtn.style.borderTop = `4px solid ${themeColor}`; activeBtn.style.color = themeColor; activeBtn.style.backgroundColor = bgColor;
+        }
+        
+        document.getElementById('mainHeaderTitle').style.backgroundColor = themeColor;
+        
+        if(tabId === 'summary') generateSummary();
+        if(tabId === 'stats') generatePopulationStats();
+    }
+
+    // --- VIRTUAL PAGINATION ENGINE --- //
+    function createEmptyRow(id) {
+        return { id: id, fac: "", child: "", sDate: "", bDate: "", gender: "", wt: "", ht: "", calc: calculateLogic("", "", "", "", "", NaN, NaN) };
+    }
+
+    function renderTable() {
+        let totalPages = Math.ceil(globalData.length / rowsPerPage) || 1;
+        if(currentPage > totalPages) currentPage = totalPages;
+        if(currentPage < 1) currentPage = 1;
+
+        let startIndex = (currentPage - 1) * rowsPerPage;
+        let endIndex = Math.min(startIndex + rowsPerPage, globalData.length);
+
+        let htmlBuffer = "";
+        for(let i = startIndex; i < endIndex; i++) htmlBuffer += generateRowHTML(globalData[i]);
+        document.getElementById('tableBody').innerHTML = htmlBuffer;
+
+        let pageHtml = "";
+        pageHtml += `<button class="page-num-btn" onclick="goToPage(1)" ${currentPage===1?'disabled':''}>First</button>`;
+        pageHtml += `<button class="page-num-btn" onclick="goToPage(${currentPage-1})" ${currentPage===1?'disabled':''}>&laquo; Prev</button>`;
+        
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+        
+        for(let p = startPage; p <= endPage; p++) {
+            pageHtml += `<button class="page-num-btn ${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        }
+        
+        if (endPage < totalPages) {
+            pageHtml += `<span style="padding: 4px; font-weight: bold; color: #666;">...</span>`;
+            pageHtml += `<button class="page-num-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+        }
+        
+        pageHtml += `<button class="page-num-btn" onclick="goToPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next &raquo;</button>`;
+        
+        pageHtml += `<div style="margin-left: 15px; display:inline-flex; align-items:center;">
+                        <span style="font-size:12px; margin-right:5px; font-weight:bold; color:#1976d2;">Jump to:</span>
+                        <input type="number" id="jumpPageInput" min="1" max="${totalPages}" style="width:50px; padding:2px; height:20px; font-size:12px; margin-right:5px;">
+                        <button class="page-num-btn" style="padding:2px 8px;" onclick="jumpToPage()">Go</button>
+                     </div>`;
+
+        document.getElementById('pageNumbers').innerHTML = pageHtml;
+        document.getElementById('pageInfoText').innerText = `Page ${currentPage} of ${totalPages} (Total Rows: ${globalData.length})`;
+    }
+
+    function goToPage(p) { currentPage = p; renderTable(); document.querySelector('.table-scroll-container').scrollTop = 0; }
+
+    function jumpToPage() {
+        let val = parseInt(document.getElementById('jumpPageInput').value);
+        let totalPages = Math.ceil(globalData.length / rowsPerPage) || 1;
+        if(val >= 1 && val <= totalPages) goToPage(val); else alert("Invalid page number.");
+    }
+
+    function formatExcelDate(dateStr) { 
+        if(!dateStr) return ""; let d = new Date(dateStr); if(isNaN(d)) return ""; 
+        return d.toISOString().split('T')[0]; 
+    }
+
+    function computeZ(y, l, m, s) {
+        if (!l || !m || !s || !y) return null;
+        let z = (Math.pow(y / m, l) - 1) / (l * s);
+        let w3n = m * Math.pow(1 + l * s * -3, 1/l), w2n = m * Math.pow(1 + l * s * -2, 1/l), w3p = m * Math.pow(1 + l * s * 3, 1/l), w2p = m * Math.pow(1 + l * s * 2, 1/l);
+        if (z < -3) return -3 + ((y - w3n) / (w2n - w3n));
+        if (z > 3) return 3 + ((y - w3p) / (w3p - w2p));
+        return z;
+    }
+
+    function getLMS(table, searchVal) {
+        let targetArray = eval(table);
+        if (!targetArray || targetArray.length === 0) return null;
+        return targetArray.find(row => {
+            let rowKey = row.Day ?? row.Month ?? row.Age ?? row.day ?? row.month ?? row.age ?? row.Length ?? row.Height ?? Object.values(row)[0]; 
+            return (table.includes("WFH") || table.includes("WFL")) ? parseFloat(rowKey).toFixed(1) === parseFloat(searchVal).toFixed(1) : Math.round(parseFloat(rowKey)) === Math.round(searchVal);
+        });
+    }
+
+    function calculateLogic(fac, child, sDate, bDate, gender, w, h) {
+        let out = { ageDays: -1, ageM: "", wazZ: "", wazS: "", hazZ: "", hazS: "", whzZ: "", whzS: "", dbi: "", dbiBg: "transparent", dbiColor: "black", facBg: "", childBg: "", rawWaz: null, rawHaz: null, rawWhz: null };
+        
+        if (!fac && !child && !sDate && !bDate && !gender && isNaN(w) && isNaN(h)) return out;
+
+        if (!fac || !child) {
+            out.dbi = "Missing Name/Facility"; out.dbiBg = "#ffcdd2"; out.dbiColor = "black";
+            out.facBg = !fac ? "#ffcdd2" : ""; out.childBg = !child ? "#ffcdd2" : ""; return out;
+        }
+
+        if (!sDate || !bDate || !gender || isNaN(w) || isNaN(h)) { out.dbi = "Missing Data"; return out; }
+        
+        let sDateObj = new Date(sDate), todayObj = new Date(); todayObj.setHours(0,0,0,0);
+        if (sDateObj > todayObj || sDateObj < new Date(bDate)) { out.dbi = "Date Error"; out.dbiBg = "#ffeb3b"; return out; }
+        
+        let ageDays = Math.floor((sDateObj - new Date(bDate)) / 86400000); 
+        out.ageDays = ageDays; out.ageM = Math.round(ageDays / 30.4375);
+        
+        if (ageDays > 1856) { out.dbi = "> 5 years"; out.dbiBg = "#ffcc80"; return out; }
+        if (h < 45) { out.dbi = "Length < 45cm"; out.dbiBg = "#e0e0e0"; return out; }
+        
+        let waz = null, haz = null, whz = null;
+        let wfaData = getLMS((gender === 'm' ? "WFA_BOYS" : "WFA_GIRLS"), ageDays); if(wfaData) { waz = computeZ(w, wfaData.L, wfaData.M, wfaData.S); out.rawWaz = waz; }
+        let hfaData = getLMS((gender === 'm' ? "HFA_BOYS" : "HFA_GIRLS"), ageDays); if(hfaData) { haz = computeZ(h, hfaData.L, hfaData.M, hfaData.S); out.rawHaz = haz; }
+        let whzData = getLMS((ageDays < 731 ? (gender === 'm' ? "WFL_BOYS" : "WFL_GIRLS") : (gender === 'm' ? "WFH_BOYS" : "WFH_GIRLS")), h); if(whzData) { whz = computeZ(w, whzData.L, whzData.M, whzData.S); out.rawWhz = whz; }
+
+        let wazStat = waz < -3 ? "Severely Underweight" : waz < -2 ? "Moderately Underweight" : "Normal";
+        let hazStat = haz < -3 ? "Severely Stunted" : haz < -2 ? "Moderately Stunted" : "Normal";
+        let whzStat = whz < -3 ? "SAM" : whz < -2 ? "MAM" : whz >= 2 ? "Obese" : "Normal";
+
+        out.wazZ = waz !== null ? waz.toFixed(3) : "N/A"; out.wazS = waz !== null ? wazStat : "N/A";
+        out.hazZ = haz !== null ? haz.toFixed(3) : "N/A"; out.hazS = haz !== null ? hazStat : "N/A";
+        out.whzZ = whz !== null ? whz.toFixed(3) : "N/A"; out.whzS = whz !== null ? whzStat : "N/A";
+
+        if (waz === null || haz === null || whz === null) { out.dbi = "Missing Data"; return out; }
+
+        let dbi = "Implausible data";
+        if (wazStat === "Normal" && hazStat === "Normal" && whzStat === "Normal") dbi = "A (Normal)";
+        else if (wazStat === "Normal" && hazStat === "Normal" && (whzStat === "MAM" || whzStat === "SAM")) dbi = "B (Only Wasting)";
+        else if (wazStat === "Normal" && hazStat === "Normal" && whzStat === "Obese") dbi = "I (Only Obese)";
+        else if (wazStat === "Normal" && hazStat.includes("Stunted") && whzStat === "Normal") dbi = "F (Only Stunting)";
+        else if (wazStat === "Normal" && hazStat.includes("Stunted") && whzStat === "Obese") dbi = "H (Stunting + Obese)";
+        else if (wazStat.includes("Underweight") && hazStat === "Normal" && whzStat === "Normal") dbi = "G (Only Underweight)";
+        else if (wazStat.includes("Underweight") && hazStat === "Normal" && (whzStat === "MAM" || whzStat === "SAM")) dbi = "C (Underweight + Wasting)";
+        else if (wazStat.includes("Underweight") && hazStat.includes("Stunted") && whzStat === "Normal") dbi = "E (Underweight + Stunting)";
+        else if (wazStat.includes("Underweight") && hazStat.includes("Stunted") && (whzStat === "MAM" || whzStat === "SAM")) dbi = "D (Underweight + Stunting + Wasting)";
+        else if (wazStat.includes("Underweight") && hazStat.includes("Stunted") && whzStat === "Obese") dbi = "J (Underweight + Stunting + Obese)";
+
+        out.dbi = dbi;
+        let cKey = dbi.charAt(0);
+        if (catColors[cKey]) { out.dbiBg = catColors[cKey]; out.dbiColor = "white"; }
+        
+        return out;
+    }
+
+    function generateRowHTML(row) {
+        let todayStr = new Date().toISOString().split('T')[0];
+        let calc = row.calc;
+        return `<tr id="row-${row.id}" data-age-days="${calc.ageDays}">
+            <td class="col-sn">${row.id}</td>
+            <td class="col-fac"><input type="text" class="facility" value="${row.fac}" style="background-color:${calc.facBg}" onkeyup="updateRowData(${row.id})" onchange="updateRowData(${row.id})"></td>
+            <td class="col-child"><input type="text" class="childName" value="${row.child}" style="background-color:${calc.childBg}" onkeyup="updateRowData(${row.id})" onchange="updateRowData(${row.id})"></td>
+            <td class="col-date"><input type="date" class="surveyDate" value="${row.sDate}" max="${todayStr}" onchange="updateRowData(${row.id})"></td>
+            <td class="col-date"><input type="date" class="dob" value="${row.bDate}" max="${todayStr}" onchange="updateRowData(${row.id})"></td>
+            <td class="col-age age-months status-cell">${calc.ageM}</td>
+            <td class="col-gen"><select class="gender" onchange="updateRowData(${row.id})"><option value="">Sel</option><option value="m" ${row.gender==='m'?'selected':''}>m</option><option value="f" ${row.gender==='f'?'selected':''}>f</option></select></td>
+            <td class="col-wt"><input type="number" class="weight" step="0.01" value="${row.wt}" onkeyup="updateRowData(${row.id})" onchange="updateRowData(${row.id})"></td>
+            <td class="col-ht"><input type="number" class="height" step="0.1" value="${row.ht}" onkeyup="updateRowData(${row.id})" onchange="updateRowData(${row.id})"></td>
+            <td class="col-z waz-z">${calc.wazZ}</td><td class="col-stat waz-stat">${calc.wazS}</td>
+            <td class="col-z haz-z">${calc.hazZ}</td><td class="col-stat haz-stat">${calc.hazS}</td>
+            <td class="col-z whz-z">${calc.whzZ}</td><td class="col-stat whz-stat">${calc.whzS}</td>
+            <td class="col-dbi dbi-cat status-cell" style="background-color:${calc.dbiBg}; color:${calc.dbiColor};">${calc.dbi}</td>
+        </tr>`;
+    }
+
+    function addRow() {
+        let newId = globalData.length > 0 ? globalData[globalData.length-1].id + 1 : 1;
+        globalData.push(createEmptyRow(newId));
+        currentPage = Math.ceil(globalData.length / rowsPerPage);
+        renderTable();
+        let scrollCont = document.querySelector('.table-scroll-container');
+        setTimeout(() => scrollCont.scrollTop = scrollCont.scrollHeight, 50);
+    }
+
+    // --- BULK CSV PROCESSING VIA WEB WORKER FOR 300,000 ROWS ---
+    function processCSV() {
+        const fileInput = document.getElementById('csvFileInput');
+        if (!fileInput.files.length) return alert("Please choose a CSV file first.");
+        const file = fileInput.files[0];
+        
+        const prog = document.getElementById('uploadProgress');
+        prog.innerHTML = "⏳ Reading and Parsing CSV file... Please wait.";
+        prog.style.color = "#d32f2f";
+        
+        Papa.parse(file, {
+            header: false,
+            skipEmptyLines: true,
+            complete: function(results) {
+                prog.innerHTML = `⏳ CSV Loaded (${results.data.length} rows). Sending to background engine...`;
+                setTimeout(() => startWorker(results.data), 100); 
+            },
+            error: function(err) {
+                prog.innerHTML = `❌ Error parsing CSV: ${err.message}`;
+            }
+        });
+    }
+
+    function startWorker(csvData) {
+        if(csvData.length > 0 && csvData[0][0] && csvData[0][0].toLowerCase().includes('doctor')) csvData.shift();
+        
+        let startId = globalData.length > 0 ? globalData[globalData.length-1].id + 1 : 1;
+        let rowsToProcess = [];
+        csvData.forEach((cols, idx) => {
+            if(cols.length >= 7) {
+                rowsToProcess.push({
+                    id: startId + idx,
+                    fac: cols[0] ? cols[0].trim() : "",
+                    child: cols[1] ? cols[1].trim() : "",
+                    sDate: cols[2] ? cols[2].trim() : "", 
+                    bDate: cols[3] ? cols[3].trim() : "",
+                    gender: (cols[4] || "").toLowerCase().trim(),
+                    wt: parseFloat(cols[5]),
+                    ht: parseFloat(cols[6])
+                });
+            }
+        });
+
+        if (globalData.length === 10 && globalData.every(r => !r.child && !r.fac && !r.sDate && !r.wt && !r.ht)) globalData = [];
+
+        const workerScript = `
+            const WFA_BOYS = ${typeof WFA_BOYS !== 'undefined' ? JSON.stringify(WFA_BOYS) : '[]'};
+            const WFA_GIRLS = ${typeof WFA_GIRLS !== 'undefined' ? JSON.stringify(WFA_GIRLS) : '[]'};
+            const HFA_BOYS = ${typeof HFA_BOYS !== 'undefined' ? JSON.stringify(HFA_BOYS) : '[]'};
+            const HFA_GIRLS = ${typeof HFA_GIRLS !== 'undefined' ? JSON.stringify(HFA_GIRLS) : '[]'};
+            const WFL_BOYS = ${typeof WFL_BOYS !== 'undefined' ? JSON.stringify(WFL_BOYS) : '[]'};
+            const WFL_GIRLS = ${typeof WFL_GIRLS !== 'undefined' ? JSON.stringify(WFL_GIRLS) : '[]'};
+            const WFH_BOYS = ${typeof WFH_BOYS !== 'undefined' ? JSON.stringify(WFH_BOYS) : '[]'};
+            const WFH_GIRLS = ${typeof WFH_GIRLS !== 'undefined' ? JSON.stringify(WFH_GIRLS) : '[]'};
+            const catColors = ${JSON.stringify(catColors)};
+
+            ${formatExcelDate.toString()}
+            ${computeZ.toString()}
+            ${getLMS.toString()}
+            ${calculateLogic.toString()}
+
+            self.onmessage = function(e) {
+                const rows = e.data.rows;
+                const processed = [];
+                for(let i=0; i<rows.length; i++) {
+                    let r = rows[i];
+                    let formattedSDate = formatExcelDate(r.sDate);
+                    let formattedBDate = formatExcelDate(r.bDate);
+                    
+                    r.sDate = formattedSDate;
+                    r.bDate = formattedBDate;
+                    r.calc = calculateLogic(r.fac, r.child, formattedSDate, formattedBDate, r.gender, r.wt, r.ht);
+                    
+                    processed.push(r);
+                    if (i % 5000 === 0 && i > 0) self.postMessage({ type: 'progress', count: i, total: rows.length });
+                }
+                self.postMessage({ type: 'done', data: processed });
+            };
+        `;
+
+        const workerBlob = new Blob([workerScript], { type: "application/javascript" });
+        const workerUrl = URL.createObjectURL(workerBlob);
+        const worker = new Worker(workerUrl);
+
+        worker.onmessage = function(e) {
+            const prog = document.getElementById('uploadProgress');
+            if(e.data.type === 'progress') {
+                prog.innerHTML = `⚙️ Processing Math Engine... ${e.data.count} / ${e.data.total} completed.`;
+            } else if (e.data.type === 'done') {
+                globalData = globalData.concat(e.data.data);
+                currentPage = 1;
+                renderTable();
+                prog.innerHTML = `✅ Successfully calculated ${e.data.data.length} children.`;
+                prog.style.color = "#2e7d32";
+                document.getElementById('csvFileInput').value = ""; 
+                worker.terminate();
+            }
+        };
+
+        worker.postMessage({ rows: rowsToProcess });
+    }
+
+    function updateRowData(id) {
+        let rowIndex = globalData.findIndex(r => r.id === id);
+        if(rowIndex === -1) return;
+        let rowObj = globalData[rowIndex], tr = document.getElementById(`row-${id}`);
+        rowObj.fac = tr.querySelector('.facility').value.trim();
+        rowObj.child = tr.querySelector('.childName').value.trim();
+        rowObj.sDate = tr.querySelector('.surveyDate').value;
+        rowObj.bDate = tr.querySelector('.dob').value;
+        rowObj.gender = tr.querySelector('.gender').value;
+        rowObj.wt = tr.querySelector('.weight').value;
+        rowObj.ht = tr.querySelector('.height').value;
+        
+        let calc = calculateLogic(rowObj.fac, rowObj.child, rowObj.sDate, rowObj.bDate, rowObj.gender, parseFloat(rowObj.wt), parseFloat(rowObj.ht));
+        rowObj.calc = calc;
+        
+        tr.querySelector('.facility').style.backgroundColor = calc.facBg; tr.querySelector('.childName').style.backgroundColor = calc.childBg;
+        tr.querySelector('.age-months').textContent = calc.ageM;
+        tr.querySelector('.waz-z').textContent = calc.wazZ; tr.querySelector('.waz-stat').textContent = calc.wazS;
+        tr.querySelector('.haz-z').textContent = calc.hazZ; tr.querySelector('.haz-stat').textContent = calc.hazS;
+        tr.querySelector('.whz-z').textContent = calc.whzZ; tr.querySelector('.whz-stat').textContent = calc.whzS;
+        
+        const outDbi = tr.querySelector('.dbi-cat'); outDbi.textContent = calc.dbi; outDbi.style.backgroundColor = calc.dbiBg; outDbi.style.color = calc.dbiColor;
+    }
+
+    function generateSummary() {
+        let counts = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, I:0, J:0, Over5:0, Missing:0, Implausible:0, Error:0 }; 
+        let validTotal = 0; let grandTotal = 0;
+        
+        globalData.forEach(r => {
+            let val = r.calc.dbi.trim(); 
+            if(!r.fac && !r.child && !r.sDate && !r.bDate && !r.gender && r.wt==="" && r.ht==="") return;
+            if (!val) return;
+            
+            let isClassified = val.match(/^[A-J] \(/) !== null;
+            let firstChar = isClassified ? val.charAt(0) : "";
+
+            if (isClassified) { counts[firstChar]++; validTotal++; grandTotal++; } 
+            else if(val.includes("> 5 years")) { counts.Over5++; grandTotal++; } 
+            else if(val.includes("Implausible")) { counts.Implausible++; grandTotal++; } 
+            else if(val.includes("Missing")) { counts.Missing++; grandTotal++; } 
+            else { counts.Error++; grandTotal++; } 
+        });
+
+        const categories = [
+            { id: "A", name: "Normal", bg: catColors.A }, { id: "B", name: "Only Wasting", bg: catColors.B }, 
+            { id: "C", name: "Underweight + Wasting", bg: catColors.C }, { id: "D", name: "Underweight + Stunting + Wasting", bg: catColors.D }, 
+            { id: "E", name: "Underweight + Stunting", bg: catColors.E }, { id: "F", name: "Only Stunting", bg: catColors.F }, 
+            { id: "G", name: "Only Underweight", bg: catColors.G }, { id: "H", name: "Stunting + Obesity", bg: catColors.H }, 
+            { id: "I", name: "Only Obesity", bg: catColors.I }, { id: "J", name: "Underweight + Stunting + Obese", bg: catColors.J }
+        ];
+
+        let html = ''; let chartData = []; let chartColors = []; let chartLabels = []; let totalAtoJ = 0;
+        categories.forEach(cat => { 
+            let count = counts[cat.id]; totalAtoJ += count; 
+            let perc = validTotal > 0 ? ((count / validTotal) * 100).toFixed(1) : "0.0"; 
+            html += `<tr><td style="text-align:center; font-weight:bold;">${cat.id}</td><td style="text-align:left;">${cat.name}</td><td style="text-align:center;"><a class="dl-link" onclick="downloadSpecificCSV('${cat.id}')" title="Download ${cat.name} list">${count}</a></td><td style="text-align:center; background-color:${cat.bg}; color:white; font-weight:bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); border: 1px solid #ccc;">${perc}%</td></tr>`; 
+            if (count > 0) { chartData.push(count); chartColors.push(cat.bg); chartLabels.push(`${cat.name} (${perc}%)`); } 
+        });
+
+        document.getElementById('summaryBody').innerHTML = html + `<tr style="background:#e8f5e9; color:black; font-weight:bold"><td colspan="2" style="text-align:right;">Total (A to J)</td><td style="text-align:center;">${totalAtoJ}</td><td style="text-align:center;">${validTotal>0?((totalAtoJ/validTotal)*100).toFixed(1):"0.0"}%</td></tr>`;
+        
+        document.getElementById('secondarySummaryBody').innerHTML = `
+            <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">DBI Classified</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('classified')" title="Click to download this list">${validTotal}</a></td></tr>
+            <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Children age > 5 years</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('over5')" title="Click to download this list">${counts.Over5}</a></td></tr>
+            <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Implausible data</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('implausible')" title="Click to download this list">${counts.Implausible}</a></td></tr>
+            <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Missing Information</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('missing')" title="Click to download this list">${counts.Missing}</a></td></tr>
+            <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Data entry error</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('error')" title="Click to download this list">${counts.Error}</a></td></tr>
+            <tr style="background:#2e7d32; color:white; font-weight:bold"><td style="padding: 10px; border: 1px solid #ccc; text-align: left;">Total Rows Evaluated</td><td style="text-align:center; border: 1px solid #ccc;">${grandTotal}</td></tr>`;
+        
+        if (chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(document.getElementById('dbiChart').getContext('2d'), { 
+            type: 'doughnut', data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, hoverOffset: 12 }] }, 
+            options: { responsive: true, maintainAspectRatio: false, layout: { padding: { bottom: 30 } }, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 12, boxHeight: 12, font: { size: 12, weight: 'bold' }, padding: 15 } } } } 
+        });
+    }
+
+    // --- POPULATION STATS MATH & RENDERING ENGINE --- //
+    function getStatsArr(key, excludeFlags) {
+        let all = [], boys = [], girls = [], flags = 0, missing = 0;
+        let limitUpper = key === 'rawHaz' ? 6 : 5;
+        let limitLower = key === 'rawWhz' ? -5 : -6;
+
+        globalData.forEach(r => {
+            if(!r.fac && !r.child && !r.sDate && !r.bDate && !r.gender && r.wt==="" && r.ht==="") return;
+            let val = r.calc[key];
+            if (val === null || val === undefined || isNaN(val)) { missing++; return; }
+            
+            let isFlagged = (val < limitLower || val > limitUpper);
+            if (isFlagged) {
+                flags++;
+                if (excludeFlags) return; 
+            }
+            
+            all.push(val);
+            if(r.gender === 'm') boys.push(val);
+            if(r.gender === 'f') girls.push(val);
+        });
+        return { all, boys, girls, flags, missing };
+    }
+
+    function calcMetrics(arr) {
+        if(arr.length === 0) return { n: 0, mean: 0, sd: 0 };
+        let sum = arr.reduce((a, b) => a + b, 0);
+        let mean = sum / arr.length;
+        let sqSum = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0);
+        let sd = arr.length > 1 ? Math.sqrt(sqSum / (arr.length - 1)) : 0;
+        return { n: arr.length, mean: mean, sd: sd };
+    }
+
+    function calcPrev(count, total) {
+        if(total === 0) return { count:0, p: 0, str: "0.0%", ci: "0.0 - 0.0" };
+        let p = count / total;
+        let se = Math.sqrt((p * (1 - p)) / total);
+        let lower = Math.max(0, p - 1.96 * se);
+        let upper = Math.min(1, p + 1.96 * se);
+        return { count: count, p: p, str: (p * 100).toFixed(1) + "%", ci: (lower * 100).toFixed(1) + " - " + (upper * 100).toFixed(1) };
+    }
+
+    function buildGaussianCurve(mean, sd, step = 0.1, min = -5, max = 5) {
+        let points = [];
+        for(let x = min; x <= max; x += step) {
+            let y = (sd === 0) ? 0 : (1 / (sd * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / sd, 2));
+            points.push({x: x, y: y});
+        }
+        return points;
+    }
+
+    function drawBellChart(canvasId, chartInst, dataMetrics) {
+        if(chartInst) chartInst.destroy();
+        
+        let minX = -5, maxX = 5;
+
+        let whoCurve = buildGaussianCurve(0, 1, 0.1, minX, maxX);
+        let sampleCurve = buildGaussianCurve(dataMetrics.mean, dataMetrics.sd, 0.1, minX, maxX);
+
+        return new Chart(document.getElementById(canvasId).getContext('2d'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    { label: 'WHO standards', data: whoCurve, borderColor: '#4caf50', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.4 },
+                    { label: 'Sample Population', data: sampleCurve, borderColor: '#f44336', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.4 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { 
+                    x: { type: 'linear', min: minX, max: maxX, title: { display: true, text: 'Z-score' } }, 
+                    y: { title: { display: true, text: 'Density' } } 
+                },
+                plugins: { 
+                    title: { display: false }, 
+                    legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 20 } } 
+                }
+            }
+        });
+    }
+
+    function formatLineHTML(label, count, n, metrics) {
+        return `<tr><td style="padding: 2px 0;">${label}</td><td>(n=${n}):</td><td style="font-weight: normal;">(${count})</td><td>${metrics.str}</td><td style="text-align: right; font-weight: normal; white-space: nowrap;">(${metrics.ci} 95% CI)</td></tr>`;
+    }
+
+    // --- NEW LINEAR DBI FRAMEWORK PLUGIN BASED ON HAND-DRAWN IMAGE ---
+    const customFrameworkPlugin = {
+        id: 'frameworkLabelsPlugin',
+        beforeDraw: (chart) => {
+            const {ctx, chartArea, width, height} = chart;
+            ctx.save(); 
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            
+            if(chartArea) {
+                ctx.fillStyle = '#fdfdfd'; 
+                ctx.fillRect(chartArea.left, chartArea.top, chartArea.width, chartArea.height);
+            }
+            ctx.restore();
+        },
+        afterDraw: (chart) => {
+            const {ctx, chartArea: {top, bottom, left, right}, scales: {x, y}} = chart;
+            if(!top) return;
+            ctx.save();
+            
+            function drawTextRaw(text, px, py, alignX, alignY, rot=0) {
+                ctx.save();
+                ctx.translate(px, py);
+                ctx.rotate(rot);
+                ctx.font = "bold 13px Arial"; 
+                ctx.textAlign = alignX;
+                ctx.textBaseline = alignY;
+                ctx.fillStyle = '#880e4f'; // Exact pen color match from sketch
+                
+                const lines = text.split('\n');
+                lines.forEach((line, i) => {
+                    let lx = 0; let ly = 0;
+                    if(alignY === 'middle') ly = (i * 15) - ((lines.length - 1) * 7.5);
+                    else if(alignY === 'top') ly = i * 15;
+                    else if(alignY === 'bottom') ly = -(lines.length - 1 - i) * 15;
+                    ctx.fillText(line, lx, ly);
+                });
+                ctx.restore();
+            }
+
+            function drawCategory(cat, text, xVal, yVal, rot=0) {
+                const px = x.getPixelForValue(xVal);
+                const py = y.getPixelForValue(yVal);
+                
+                ctx.save();
+                ctx.translate(px, py);
+                ctx.rotate(rot);
+                
+                // Draw Category Text
+                ctx.font = "12px Arial";
+                ctx.fillStyle = '#880e4f';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                const lines = text.split('\n');
+                lines.forEach((l, i) => {
+                    ctx.fillText(l, 0, -18 - ((lines.length - 1 - i) * 14));
+                });
+                
+                // Draw Circle
+                ctx.beginPath();
+                ctx.arc(0, 0, 11, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#880e4f';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                
+                // Draw Letter inside circle
+                ctx.font = "bold 13px Arial";
+                ctx.textBaseline = 'middle';
+                ctx.fillText(cat, 0, 1);
+                ctx.restore();
+            }
+
+            // AXES Labels mapped dynamically
+            const cx = x.getPixelForValue(-2);
+            const cy = y.getPixelForValue(-2);
+            drawTextRaw('Wt. for AZ. (+)', cx, top + 15, 'center', 'top', 0);
+            drawTextRaw('Wt. for AZ. (-)', cx, bottom - 15, 'center', 'bottom', 0);
+            drawTextRaw('Ht. for AZ. (-)', left + 15, cy, 'left', 'middle', 0);
+            drawTextRaw('Ht. for AZ. (+)', right - 15, cy, 'right', 'middle', 0);
+            
+            // Calculate exact angle for diagonals natively
+            const px1 = x.getPixelForValue(-2); const py1 = y.getPixelForValue(-2);
+            const px2 = x.getPixelForValue(2); const py2 = y.getPixelForValue(2);
+            const lineAngle = Math.atan2(py2 - py1, px2 - px1);
+            
+            // Diagonal Labels
+            drawTextRaw('Wt. for Ht.\n(+2SD)', x.getPixelForValue(3.5), y.getPixelForValue(5.5), 'right', 'bottom', lineAngle);
+            drawTextRaw('Wt. for Ht.\n(-2SD)', x.getPixelForValue(5.5), y.getPixelForValue(3.5), 'right', 'bottom', lineAngle);
+            drawTextRaw('Wt. for Ht.\n(+2SD)', x.getPixelForValue(-5.5), y.getPixelForValue(-3.5), 'left', 'top', lineAngle);
+            drawTextRaw('Wt. for Ht.\n(-2SD)', x.getPixelForValue(-3.5), y.getPixelForValue(-5.5), 'left', 'top', lineAngle);
+
+            // 10 Categories matching the sketch precisely
+            drawCategory('A', 'Normal for - WAZ, HAZ, WHZ', 1.5, 1.5, lineAngle);
+            drawCategory('B', 'only wasting', 4.5, -0.5);
+            drawCategory('C', 'Underweight + Wasting', 2, -4.5, lineAngle);
+            drawCategory('D', 'Underweight + Wasting + Stunting', -3, -5, lineAngle);
+            drawCategory('E', 'Underweight + Stunting', -3.2, -3.2);
+            drawCategory('F', 'only stunting', -1.2, -0.2, lineAngle);
+            drawCategory('G', 'only underweight', -0.5, -2.8);
+            drawCategory('H', 'Stunting + Overweight/obesity', -3.5, 1);
+            drawCategory('I', 'only (overweight or obese)', 1.5, 4.5, lineAngle);
+            drawCategory('J', 'Underweight +\nStunting +\nOverweight/obesity', -5.2, -1.8);
+
+            ctx.restore();
+        }
+    };
+
+    function generatePopulationStats() {
+        let excludeFlags = document.getElementById('toggleExcl').checked;
+
+        // --- SECTION 1: WAZ ---
+        let wazData = getStatsArr('rawWaz', excludeFlags);
+        let wM = calcMetrics(wazData.all), wB = calcMetrics(wazData.boys), wG = calcMetrics(wazData.girls);
+        wazChartInst = drawBellChart('wazChart', wazChartInst, wM);
+
+        let uAll = wazData.all.filter(v => v < -2).length, uB = wazData.boys.filter(v => v < -2).length, uG = wazData.girls.filter(v => v < -2).length;
+        let suAll = wazData.all.filter(v => v < -3).length, suB = wazData.boys.filter(v => v < -3).length, suG = wazData.girls.filter(v => v < -3).length;
+        let muAll = uAll - suAll, muB = uB - suB, muG = uG - suG;
+
+        document.getElementById('wazStatsText').innerHTML = 
+            `Prevalence of underweight (<-2 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', uAll, wM.n, calcPrev(uAll, wM.n)) + formatLineHTML('Boys', uB, wB.n, calcPrev(uB, wB.n)) + formatLineHTML('Girls', uG, wG.n, calcPrev(uG, wG.n)) + `</table><br>` +
+            `Prevalence of moderate underweight (<-2 and >=-3 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', muAll, wM.n, calcPrev(muAll, wM.n)) + formatLineHTML('Boys', muB, wB.n, calcPrev(muB, wB.n)) + formatLineHTML('Girls', muG, wG.n, calcPrev(muG, wG.n)) + `</table><br>` +
+            `Prevalence of severe underweight (<-3 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', suAll, wM.n, calcPrev(suAll, wM.n)) + formatLineHTML('Boys', suB, wB.n, calcPrev(suB, wB.n)) + formatLineHTML('Girls', suG, wG.n, calcPrev(suG, wG.n)) + `</table><br>` +
+            `<div class="stats-footer-text">mean±SD of WAZ (n=${wM.n}): ${wM.mean.toFixed(2)} ± ${wM.sd.toFixed(2)}<br>` + `z-scores not available: ${wazData.missing}<br>` + `z-scores out of range: ${wazData.flags}</div>`;
+
+        // --- SECTION 2: HAZ ---
+        let hazData = getStatsArr('rawHaz', excludeFlags);
+        let hM = calcMetrics(hazData.all), hB = calcMetrics(hazData.boys), hG = calcMetrics(hazData.girls);
+        hazChartInst = drawBellChart('hazChart', hazChartInst, hM);
+
+        let sAll = hazData.all.filter(v => v < -2).length, sB = hazData.boys.filter(v => v < -2).length, sG = hazData.girls.filter(v => v < -2).length;
+        let ssAll = hazData.all.filter(v => v < -3).length, ssB = hazData.boys.filter(v => v < -3).length, ssG = hazData.girls.filter(v => v < -3).length;
+        let msAll = sAll - ssAll, msB = sB - ssB, msG = sG - ssG;
+
+        document.getElementById('hazStatsText').innerHTML = 
+            `Prevalence of stunting (<-2 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', sAll, hM.n, calcPrev(sAll, hM.n)) + formatLineHTML('Boys', sB, hB.n, calcPrev(sB, hB.n)) + formatLineHTML('Girls', sG, hG.n, calcPrev(sG, hG.n)) + `</table><br>` +
+            `Prevalence of moderate stunting (<-2 and >=-3 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', msAll, hM.n, calcPrev(msAll, hM.n)) + formatLineHTML('Boys', msB, hB.n, calcPrev(msB, hB.n)) + formatLineHTML('Girls', msG, hG.n, calcPrev(msG, hG.n)) + `</table><br>` +
+            `Prevalence of severe stunting (<-3 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', ssAll, hM.n, calcPrev(ssAll, hM.n)) + formatLineHTML('Boys', ssB, hB.n, calcPrev(ssB, hB.n)) + formatLineHTML('Girls', ssG, hG.n, calcPrev(ssG, hG.n)) + `</table><br>` +
+            `<div class="stats-footer-text">mean±SD of HAZ (n=${hM.n}): ${hM.mean.toFixed(2)} ± ${hM.sd.toFixed(2)}<br>` + `z-scores not available: ${hazData.missing}<br>` + `z-scores out of range: ${hazData.flags}</div>`;
+
+        // --- SECTION 3: WHZ ---
+        let whzData = getStatsArr('rawWhz', excludeFlags);
+        let whM = calcMetrics(whzData.all), whB = calcMetrics(whzData.boys), whG = calcMetrics(whzData.girls);
+        whzChartInst = drawBellChart('whzChart', whzChartInst, whM);
+
+        let waAll = whzData.all.filter(v => v < -2).length, waB = whzData.boys.filter(v => v < -2).length, waG = whzData.girls.filter(v => v < -2).length;
+        let swAll = whzData.all.filter(v => v < -3).length, swB = whzData.boys.filter(v => v < -3).length, swG = whzData.girls.filter(v => v < -3).length;
+        let mwAll = waAll - swAll, mwB = waB - swB, mwG = waG - swG;
+
+        document.getElementById('whzStatsText').innerHTML = 
+            `Prevalence of total acute malnutrition (<-2 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', waAll, whM.n, calcPrev(waAll, whM.n)) + formatLineHTML('Boys', waB, whB.n, calcPrev(waB, whB.n)) + formatLineHTML('Girls', waG, whG.n, calcPrev(waG, whG.n)) + `</table><br>` +
+            `Prevalence of moderate acute malnutrition (<-2 and >=-3 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', mwAll, whM.n, calcPrev(mwAll, whM.n)) + formatLineHTML('Boys', mwB, whB.n, calcPrev(mwB, whB.n)) + formatLineHTML('Girls', mwG, whG.n, calcPrev(mwG, whG.n)) + `</table><br>` +
+            `Prevalence of severe acute malnutrition (<-3 z-score)<br>` +
+            `<table class="stats-grid-table">` + formatLineHTML('Total', swAll, whM.n, calcPrev(swAll, whM.n)) + formatLineHTML('Boys', swB, whB.n, calcPrev(swB, whB.n)) + formatLineHTML('Girls', swG, whG.n, calcPrev(swG, whG.n)) + `</table><br>` +
+            `<div class="stats-footer-text">mean±SD of WHZ (n=${whM.n}): ${whM.mean.toFixed(2)} ± ${whM.sd.toFixed(2)}<br>` + `z-scores not available: ${whzData.missing}<br>` + `z-scores out of range: ${whzData.flags}</div>`;
+
+        // --- SECTION 4: NEW LINEAR CONCEPTUAL DENSITY SCATTER PLOT ---
+        let rawScatterData = [];
+        globalData.forEach(r => {
+            if(r.calc.dbi.match(/^[A-J] \(/)) {
+                let isFlagged = (r.calc.rawWaz < -6 || r.calc.rawWaz > 5 || r.calc.rawHaz < -6 || r.calc.rawHaz > 6 || r.calc.rawWhz < -5 || r.calc.rawWhz > 5);
+                if (excludeFlags && isFlagged) return; 
+                rawScatterData.push(r);
+            }
+        });
+
+        let sampledScatterData = [];
+        if(rawScatterData.length > 3000) {
+            let step = rawScatterData.length / 3000;
+            for(let i=0; i<3000; i++) sampledScatterData.push(rawScatterData[Math.floor(i * step)]);
+        } else {
+            sampledScatterData = rawScatterData;
+        }
+
+        let scatterDatasets = {};
+        ['A','B','C','D','E','F','G','H','I','J'].forEach(cat => {
+            scatterDatasets[cat] = { label: `Category ${cat}`, data: [], backgroundColor: catColors[cat], pointRadius: 1.5, hoverRadius: 4, borderWidth: 0 };
+        });
+
+        // NEW MATHEMATICAL BOUNDS BASED ON THE LINEAR FRAMEWORK (Origin -2, -2)
+        function getBoundedJitter(cat) {
+            for(let attempts=0; attempts<200; attempts++) {
+                let x = -5.8 + Math.random() * 11.6; 
+                let y = -5.8 + Math.random() * 11.6; 
+                let valid = false;
+                if (cat === 'A') valid = (x >= -1.9 && y >= -1.9 && y <= x + 1.9 && y >= x - 1.9);
+                if (cat === 'B') valid = (x >= -1.9 && y >= -1.9 && y < x - 2.1);
+                if (cat === 'C') valid = (x >= -1.9 && y < -2.1 && y < x - 2.1);
+                if (cat === 'D') valid = (x < -2.1 && y < -2.1 && y < x - 2.1);
+                if (cat === 'E') valid = (x < -2.1 && y < -2.1 && y >= x - 1.9 && y <= x + 1.9);
+                if (cat === 'F') valid = (x < -2.1 && y >= -1.9 && y <= x + 1.9);
+                if (cat === 'G') valid = (x >= -1.9 && y < -2.1 && y >= x - 1.9);
+                if (cat === 'H') valid = (x < -2.1 && y >= -1.9 && y > x + 2.1);
+                if (cat === 'I') valid = (x >= -1.9 && y >= -1.9 && y > x + 2.1);
+                if (cat === 'J') valid = (x < -2.1 && y < -2.1 && y > x + 2.1);
+                if (valid) return {x, y};
+            }
+            const fb = {'A':{x:0,y:0}, 'B':{x:4,y:-1}, 'C':{x:2,y:-4}, 'D':{x:-4,y:-5}, 'E':{x:-3.5,y:-3.5}, 'F':{x:-3.5,y:-0.5}, 'G':{x:0,y:-3}, 'H':{x:-4,y:1}, 'I':{x:1,y:4}, 'J':{x:-4,y:-1.5}};
+            return fb[cat];
+        }
+
+        sampledScatterData.forEach(r => {
+            let cat = r.calc.dbi.charAt(0);
+            let coords = getBoundedJitter(cat);
+            scatterDatasets[cat].data.push({ x: coords.x, y: coords.y, child: r.child || "Unnamed", id: r.id });
+        });
+
+        // DRAWING THE EXACT LINES FROM THE HAND-DRAWN GRID
+        let frameworkLines = [
+            { type: 'line', label: 'HAZ = -2 Axis', data: [{x:-6, y:-2}, {x:6, y:-2}], borderColor: '#555', borderWidth: 1.5, pointRadius: 0, fill: false },
+            { type: 'line', label: 'WAZ = -2 Axis', data: [{x:-2, y:-6}, {x:-2, y:6}], borderColor: '#555', borderWidth: 1.5, pointRadius: 0, fill: false },
+            { type: 'line', label: 'WHZ = +2 Diagonal', data: [{x:-6, y:-4}, {x:4, y:6}], borderColor: '#880e4f', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0, fill: false },
+            { type: 'line', label: 'WHZ = -2 Diagonal', data: [{x:-4, y:-6}, {x:6, y:4}], borderColor: '#880e4f', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0, fill: false }
+        ];
+
+        let finalDatasets = frameworkLines.concat(Object.values(scatterDatasets).filter(d => d.data.length > 0));
+
+        if(scatterChartInst) scatterChartInst.destroy();
+        scatterChartInst = new Chart(document.getElementById('scatterChart').getContext('2d'), {
+            type: 'scatter',
+            data: { datasets: finalDatasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    x: { display: false, min: -6, max: 6 },
+                    y: { display: false, min: -6, max: 6 }
+                },
+                plugins: {
+                    legend: { 
+                        position: 'top', 
+                        labels: { 
+                            usePointStyle: true, boxWidth: 12, color: '#333',
+                            filter: function(item) { return !item.text.includes('Axis') && !item.text.includes('Diagonal') && !item.text.includes('Curve'); }
+                        } 
+                    },
+                    tooltip: { callbacks: { label: (ctx) => {
+                        if(ctx.dataset.type === 'line') return false; 
+                        return `SN ${ctx.raw.id} (${ctx.raw.child})`; 
+                    }}}
+                }
+            },
+            plugins: [customFrameworkPlugin]
+        });
+    }
+
+    function exportChartAsPNG(canvasId, filename) {
+        let imageURI = document.getElementById(canvasId).toDataURL("image/png"); let downloadLink = document.createElement('a'); downloadLink.download = filename; downloadLink.href = imageURI; downloadLink.style.display = 'none'; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
+    }
+    
+    function downloadSpecificCSV(categoryType) {
+        let csv = [];
+        globalData.forEach(r => {
+            let val = r.calc.dbi.trim();
+            if(!r.fac && !r.child && !r.sDate && !r.bDate && !r.gender && r.wt==="" && r.ht==="") return;
+            if (!val) return;
+
+            let match = false; 
+            let isClassified = val.match(/^[A-J] \(/) !== null;
+            let firstChar = isClassified ? val.charAt(0) : "";
+
+            if (categoryType.length === 1 && isClassified && firstChar === categoryType) match = true;
+            else if (categoryType === 'classified' && isClassified) match = true;
+            else if (categoryType === 'over5' && val.includes("> 5 years")) match = true;
+            else if (categoryType === 'implausible' && val.includes("Implausible")) match = true;
+            else if (categoryType === 'missing' && val.includes("Missing")) match = true;
+            else if (categoryType === 'error' && !isClassified && !val.includes("> 5 years") && !val.includes("Implausible") && !val.includes("Missing")) match = true;
+
+            if (match) {
+                let c = r.calc;
+                csv.push(`"${r.id}","${r.fac}","${r.child}","${r.sDate}","${r.bDate}","${c.ageM}","${r.gender}","${r.wt}","${r.ht}","${c.wazZ}","${c.wazS}","${c.hazZ}","${c.hazS}","${c.whzZ}","${c.whzS}","${c.dbi}"`);
+            }
+        });
+
+        if (csv.length === 0) { alert("No data available in this specific category to download."); return; }
+        
+        let header = '"SN","Facility","Child Name","Survey Date","Birth Date","Age (Months)","Gender","Weight","Height","WAZ Z","WAZ Status","HAZ Z","HAZ Status","WHZ Z","WHZ Status","DBI Category"';
+        let csvFile = new Blob([[header, ...csv].join("\n")], { type: "text/csv" }); 
+        let downloadLink = document.createElement("a"); downloadLink.download = `DBI_Filtered_${categoryType.toUpperCase()}_Data.csv`; 
+        downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = "none"; 
+        document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
+    }
+
+    function exportTableToCSV() {
+        let csv = []; let rows = document.querySelectorAll("#exportTable tr");
+        for (let i = 0; i < rows.length; i++) { let row = [], cols = rows[i].querySelectorAll("td, th"); for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].textContent + '"'); csv.push(row.join(",")); }
+        let csvFile = new Blob([csv.join("\n")], { type: "text/csv" }); let downloadLink = document.createElement("a"); downloadLink.download = "DBI_Summary_Report.csv"; downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
+    }
+    
+    function exportCalculatedDataToCSV() {
+        let csv = [];
+        globalData.forEach(r => {
+            let c = r.calc;
+            if (!r.sDate && !r.bDate && !r.gender && r.wt==="" && r.ht==="" && !r.child && !r.fac) return; 
+            csv.push(`"${r.id}","${r.fac}","${r.child}","${r.sDate}","${r.bDate}","${c.ageM}","${r.gender}","${r.wt}","${r.ht}","${c.wazZ}","${c.wazS}","${c.hazZ}","${c.hazS}","${c.whzZ}","${c.whzS}","${c.dbi}"`);
+        });
+        
+        let header = '"SN","Facility","Child Name","Survey Date","Birth Date","Age (Months)","Gender","Weight","Height","WAZ Z","WAZ Status","HAZ Z","HAZ Status","WHZ Z","WHZ Status","DBI Category"';
+        let csvFile = new Blob([[header, ...csv].join("\n")], { type: "text/csv" }); let downloadLink = document.createElement("a"); downloadLink.download = "DBI_Calculated_Data.csv"; downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
+    }
+
+    // =========================================================================
+    // FORMAL PDF REPORT GENERATOR ENGINE
+    // =========================================================================
+    function preparePrintReport() {
+        document.getElementById('printWazImg').src = document.getElementById('wazChart').toDataURL('image/png');
+        document.getElementById('printHazImg').src = document.getElementById('hazChart').toDataURL('image/png');
+        document.getElementById('printWhzImg').src = document.getElementById('whzChart').toDataURL('image/png');
+
+        let totalUploaded = 0; let totalErrors = 0; let whoFlagsCount = 0;
+        
+        let cleanCohort = [];
+        
+        globalData.forEach(r => {
+            if(!r.fac && !r.child && !r.sDate && !r.bDate && !r.gender && r.wt==="" && r.ht==="") return;
+            totalUploaded++;
+            
+            let val = r.calc.dbi.trim();
+            let isClassified = val.match(/^[A-J] \(/) !== null;
+            
+            if (!isClassified) {
+                totalErrors++;
+            } else {
+                let isFlagged = (r.calc.rawWaz < -6 || r.calc.rawWaz > 5 || r.calc.rawHaz < -6 || r.calc.rawHaz > 6 || r.calc.rawWhz < -5 || r.calc.rawWhz > 5);
+                if (isFlagged) {
+                    whoFlagsCount++;
+                } else {
+                    cleanCohort.push(r);
+                }
+            }
+        });
+
+        let nTotal = cleanCohort.length;
+        let nBoys = 0; let nGirls = 0;
+        let n0_5 = 0; let n6_23 = 0; let n24_59 = 0;
+
+        let dbiCounts = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, I:0, J:0 };
+        
+        let wazStats = {
+            total: { n:0, u:0, mu:0, su:0 }, boys: { n:0, u:0, mu:0, su:0 }, girls: { n:0, u:0, mu:0, su:0 },
+            a0_5: { n:0, u:0, mu:0, su:0 }, a6_23: { n:0, u:0, mu:0, su:0 }, a24_59: { n:0, u:0, mu:0, su:0 }
+        };
+        let hazStats = {
+            total: { n:0, s:0, ms:0, ss:0 }, boys: { n:0, s:0, ms:0, ss:0 }, girls: { n:0, s:0, ms:0, ss:0 },
+            a0_5: { n:0, s:0, ms:0, ss:0 }, a6_23: { n:0, s:0, ms:0, ss:0 }, a24_59: { n:0, s:0, ms:0, ss:0 }
+        };
+        let whzStats = {
+            total: { n:0, w:0, mw:0, sw:0, ov:0, ob:0 }, boys: { n:0, w:0, mw:0, sw:0, ov:0, ob:0 }, girls: { n:0, w:0, mw:0, sw:0, ov:0, ob:0 },
+            a0_5: { n:0, w:0, mw:0, sw:0, ov:0, ob:0 }, a6_23: { n:0, w:0, mw:0, sw:0, ov:0, ob:0 }, a24_59: { n:0, w:0, mw:0, sw:0, ov:0, ob:0 }
+        };
+
+        cleanCohort.forEach(r => {
+            let cat = r.calc.dbi.charAt(0);
+            dbiCounts[cat]++;
+            
+            if(r.gender === 'm') nBoys++; else if(r.gender === 'f') nGirls++;
+            
+            let ageM = r.calc.ageM;
+            let group = '';
+            if(ageM <= 5) { n0_5++; group = 'a0_5'; }
+            else if(ageM >= 6 && ageM <= 23) { n6_23++; group = 'a6_23'; }
+            else { n24_59++; group = 'a24_59'; }
+
+            let gStr = r.gender === 'm' ? 'boys' : 'girls';
+
+            // WAZ tally
+            if(r.calc.rawWaz !== null) {
+                let v = r.calc.rawWaz;
+                [wazStats.total, wazStats[gStr], wazStats[group]].forEach(obj => {
+                    obj.n++;
+                    if(v < -2) obj.u++;
+                    if(v < -3) obj.su++;
+                    else if(v < -2) obj.mu++;
+                });
+            }
+            // HAZ tally
+            if(r.calc.rawHaz !== null) {
+                let v = r.calc.rawHaz;
+                [hazStats.total, hazStats[gStr], hazStats[group]].forEach(obj => {
+                    obj.n++;
+                    if(v < -2) obj.s++;
+                    if(v < -3) obj.ss++;
+                    else if(v < -2) obj.ms++;
+                });
+            }
+            // WHZ tally
+            if(r.calc.rawWhz !== null) {
+                let v = r.calc.rawWhz;
+                [whzStats.total, whzStats[gStr], whzStats[group]].forEach(obj => {
+                    obj.n++;
+                    if(v < -2) obj.w++;
+                    if(v < -3) obj.sw++;
+                    else if(v < -2) obj.mw++;
+                    if(v > 2) obj.ov++;
+                    if(v > 3) obj.ob++;
+                });
+            }
+        });
+
+        document.getElementById('reportHeaderDate').innerText = `Published Date: ${new Date().toLocaleDateString()} | Cohort size (N): ${nTotal}`;
+
+        document.getElementById('reportExecSummary').innerHTML = 
+            `This report analyzes the nutritional classification of an initial uploaded dataset of <strong>${totalUploaded} children</strong>. ` +
+            `Following the strict application of WHO biological plausibility exclusions, <strong>${whoFlagsCount}</strong> statistical outliers ` +
+            `and <strong>${totalErrors}</strong> data-entry errors were systematically excluded. The final cleaned epidemiological cohort comprises ` +
+            `<strong>${nTotal} valid children</strong>. The gender distribution includes <strong>${nBoys} boys</strong> and <strong>${nGirls} girls</strong>. ` +
+            `The age distribution is as follows: <strong>${n0_5}</strong> children aged 0–5 months, <strong>${n6_23}</strong> aged 6–23 months, and <strong>${n24_59}</strong> aged 24–59 months.`;
+
+        document.getElementById('reportTreeDiagram').innerHTML = 
+            `<div class="tree-box">Total Children Uploaded: ${totalUploaded}</div>
+             <div class="tree-arrow"></div>
+             <div class="tree-box error">Excluded: ${totalErrors} (Data Errors) + ${whoFlagsCount} (WHO Flags)</div>
+             <div class="tree-arrow"></div>
+             <div class="tree-box final">Final Analyzed Cohort: ${nTotal}</div>`;
+
+        let getPrevStr = (count, total) => {
+            if(total === 0) return { pct: "0 (0.0%)", ci: "(0.0 - 0.0)" };
+            let p = count / total;
+            let se = Math.sqrt((p * (1 - p)) / total);
+            let lower = Math.max(0, (p - 1.96 * se) * 100);
+            let upper = Math.min(100, (p + 1.96 * se) * 100);
+            return { pct: `${count} (${(p*100).toFixed(1)}%)`, ci: `(${lower.toFixed(1)} - ${upper.toFixed(1)})` };
+        };
+
+        const dbiDefs = [
+            { id: 'A', text: 'Normal (No anthropometric failure)' },
+            { id: 'B', text: 'Only Wasting' },
+            { id: 'C', text: 'Underweight + Wasting' },
+            { id: 'D', text: 'Underweight + Stunting + Wasting' },
+            { id: 'E', text: 'Underweight + Stunting' },
+            { id: 'F', text: 'Only Stunting' },
+            { id: 'G', text: 'Only Underweight' },
+            { id: 'H', text: 'Stunting + Overweight/Obesity' },
+            { id: 'I', text: 'Only Overweight/Obesity' },
+            { id: 'J', text: 'Underweight + stunting + Overweight/Obesity' }
+        ];
+
+        let dbiHtml = '';
+        dbiDefs.forEach((d, i) => {
+            let res = getPrevStr(dbiCounts[d.id], nTotal);
+            dbiHtml += `<tr><td>${i+1}</td><td><strong>${d.id}</strong></td><td>${d.text}</td><td>${res.pct}</td><td>${res.ci}</td></tr>`;
+        });
+        document.getElementById('reportDBITableBody').innerHTML = dbiHtml;
+
+        let makeRowW = (label, data) => `<tr><td><strong>${label}</strong></td><td>${data.n}</td><td>${getPrevStr(data.u, data.n).pct}</td><td>${getPrevStr(data.mu, data.n).pct}</td><td>${getPrevStr(data.su, data.n).pct}</td></tr>`;
+        document.getElementById('reportWazTableBody').innerHTML = 
+            makeRowW('Total', wazStats.total) + makeRowW('Boys', wazStats.boys) + makeRowW('Girls', wazStats.girls) +
+            makeRowW('0-5 months', wazStats.a0_5) + makeRowW('6-23 months', wazStats.a6_23) + makeRowW('24-59 months', wazStats.a24_59);
+
+        let makeRowH = (label, data) => `<tr><td><strong>${label}</strong></td><td>${data.n}</td><td>${getPrevStr(data.s, data.n).pct}</td><td>${getPrevStr(data.ms, data.n).pct}</td><td>${getPrevStr(data.ss, data.n).pct}</td></tr>`;
+        document.getElementById('reportHazTableBody').innerHTML = 
+            makeRowH('Total', hazStats.total) + makeRowH('Boys', hazStats.boys) + makeRowH('Girls', hazStats.girls) +
+            makeRowH('0-5 months', hazStats.a0_5) + makeRowH('6-23 months', hazStats.a6_23) + makeRowH('24-59 months', hazStats.a24_59);
+
+        let makeRowWhz = (label, data) => `<tr><td><strong>${label}</strong></td><td>${data.n}</td><td>${getPrevStr(data.w, data.n).pct}</td><td>${getPrevStr(data.sw, data.n).pct}</td><td>${getPrevStr(data.ov, data.n).pct}</td><td>${getPrevStr(data.ob, data.n).pct}</td></tr>`;
+        document.getElementById('reportWhzTableBody').innerHTML = 
+            makeRowWhz('Total', whzStats.total) + makeRowWhz('Boys', whzStats.boys) + makeRowWhz('Girls', whzStats.girls) +
+            makeRowWhz('0-5 months', whzStats.a0_5) + makeRowWhz('6-23 months', whzStats.a6_23) + makeRowWhz('24-59 months', whzStats.a24_59);
+
+        // Allow tiny delay for images to populate before firing print dialog
+        setTimeout(() => window.print(), 300);
     }
 </script>
 </body>
