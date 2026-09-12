@@ -353,7 +353,7 @@
                 <h3>Technical Note: Calculation Assumptions</h3>
                 <p><strong>DBI Classification Limits:</strong> DBI classification uses a Z‑score less than −2 to classify low weight-for-age as “underweight”, low length/height-for-age as “stunted”, and low weight-for-length as “wasted”. Similarly a Z‑score above +2 is used to classify weight-for-height as “Overweight/Obesity”.</p>
                 <p><strong>LMS Method:</strong> The computation of percentiles and z-scores applies formulae based on the LMS method [Cole, T. J. ‘The LMS method for constructing normalized growth standards’, European Journal of Clinical Nutrition, 44, 45–60 (1990)]. This is the same methodological approach utilized by the official WHO Anthro software framework.</p>
-                <p><strong>Age Limit:</strong> Tool will not function for children > 5 years (>59 months) per WHO 2006 standards.</p>
+                <p><strong>Age Limit:</strong> Tool will not function for children > 5 years (>59 months) per WHO 2006 standards. Note: Calculations cease exactly at 1826 days (5.0 years) to strictly align with the WHO Anthro software engine cutoff.</p>
                 <p><strong>Minimum Length:</strong> No classification for length < 45 cm per WHO standards.</p>
             </div>
             <div class="copyright-notice">
@@ -148143,7 +148143,8 @@
         // Epidemiological standard: Completed months (truncate, do not round up)
         out.ageM = Math.floor(ageDays / 30.4375);
         
-        if (ageDays > 1856) { out.dbi = "> 5 years"; out.dbiBg = "#ffcc80"; return out; }
+        // Strict cutoff at exactly 5.0 years to perfectly align with WHO Anthro Software output rules
+        if (ageDays > 1826) { out.dbi = "> 5 years"; out.dbiBg = "#ffcc80"; return out; }
         if (h < 45) { out.dbi = "Length < 45cm"; out.dbiBg = "#e0e0e0"; return out; }
         
         let waz = null, haz = null, whz = null;
