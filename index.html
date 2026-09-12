@@ -318,7 +318,7 @@
                     <strong>Statistical & Plotting Notes:</strong><br><br>
                     • Toggle the <strong>"Analysis Data Mode"</strong> at the top of the tab to universally include or exclude flagged outliers from all graphs and tables.<br>
                     • <strong>Exclusion Criteria (As per WHO Reference):</strong> Data points falling outside the WHO biological plausibility limits are flagged as "out of range" and are excluded when toggled. The limits are: WAZ < -6 or > 5; HAZ < -6 or > 6; WHZ < -5 or > 5.<br>
-                    • <strong>LMS Method:</strong> The computation of percentiles and z-scores uses formulae based on the LMS method, directly mirroring the official WHO Anthro software framework [Cole, T. J. ‘The LMS method for constructing normalized growth standards’, European Journal of Clinical Nutrition, 44, 45–60 (1990)].<br>
+                    • <strong>LMS Method:</strong> The computation of percentiles and z-scores applies formulae based on the LMS method [Cole, T. J. ‘The LMS method for constructing normalized growth standards’, European Journal of Clinical Nutrition, 44, 45–60 (1990)]. This is the same methodological approach utilized by the official WHO Anthro software framework.<br>
                     • The Framework represents the linear mathematical relationship between Weight-for-Age (Y-Axis), Height-for-Age (X-Axis), and Weight-for-Height (Diagonals) originating around the clinical -2 SD intercepts.
                 </div>
             </div>
@@ -352,7 +352,7 @@
             <div class="tech-note">
                 <h3>Technical Note: Calculation Assumptions</h3>
                 <p><strong>DBI Classification Limits:</strong> DBI classification uses a Z‑score less than −2 to classify low weight-for-age as “underweight”, low length/height-for-age as “stunted”, and low weight-for-length as “wasted”. Similarly a Z‑score above +2 is used to classify weight-for-height as “Overweight/Obesity”.</p>
-                <p><strong>LMS Method:</strong> The computation of percentiles and z-scores for all three indicators uses formulae based on the LMS method given by Cole and Green in 1990, matching WHO Anthro software.</p>
+                <p><strong>LMS Method:</strong> The computation of percentiles and z-scores applies formulae based on the LMS method [Cole, T. J. ‘The LMS method for constructing normalized growth standards’, European Journal of Clinical Nutrition, 44, 45–60 (1990)]. This is the same methodological approach utilized by the official WHO Anthro software framework.</p>
                 <p><strong>Age Limit:</strong> Tool will not function for children > 5 years (>59 months) per WHO 2006 standards.</p>
                 <p><strong>Minimum Length:</strong> No classification for length < 45 cm per WHO standards.</p>
             </div>
@@ -463,7 +463,7 @@
             <div class="methodology-box">
                 <h3 style="margin-top: 0; color: #1976d2; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Methodology, Criteria & Assumptions</h3>
                 <ul style="margin: 0; padding-left: 20px;">
-                    <li style="margin-bottom: 5px;"><strong>LMS Method:</strong> The computation of percentiles and z-scores uses formulae based on the LMS method, directly mirroring the official WHO Anthro software framework [Cole, T. J. ‘The LMS method for constructing normalized growth standards’, European Journal of Clinical Nutrition, 44, 45–60 (1990)].</li>
+                    <li style="margin-bottom: 5px;"><strong>LMS Method:</strong> The computation of percentiles and z-scores applies formulae based on the LMS method [Cole, T. J. ‘The LMS method for constructing normalized growth standards’, European Journal of Clinical Nutrition, 44, 45–60 (1990)]. This is the same methodological approach utilized by the official WHO Anthro software framework.</li>
                     <li style="margin-bottom: 5px;"><strong>Age & Growth Standards:</strong> All calculations conform strictly to the <strong>WHO Child Growth Standards (2006)</strong>. Age limits are restricted to children 0 to 59 months. Classifications are not computed for lengths < 45 cm.</li>
                     <li style="margin-bottom: 5px;"><strong>Epidemiological Flagging & Exclusions:</strong> To guarantee the highest epidemiological accuracy and prevent data-entry typos from skewing clinical prevalence, this report explicitly excludes extreme biological outliers using the strict WHO fixed limits: WAZ < -6 or > 5; HAZ < -6 or > 6; WHZ < -5 or > 5.</li>
                     <li><strong>Scatter Plot Density:</strong> The 2-dimensional scatter visualization maps the linear relationship between WAZ, HAZ, and WHZ intersecting precisely at the -2 SD clinical thresholds.</li>
@@ -148639,6 +148639,7 @@
         
         ['A','B','C','D','E','F','G','H','I','J'].forEach(cat => {
             let catData = rawScatterData.filter(r => r.calc.dbi.charAt(0) === cat);
+            // Strict mathematical proportionality - NO ARTIFICIAL FLOOR
             let sampleSize = Math.round(catData.length * sampleRate); 
             
             let step = sampleSize > 0 ? (catData.length / sampleSize) : 1;
