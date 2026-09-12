@@ -124,18 +124,18 @@
             .sticky-top, .tab-container, .tab-wrapper { display: none !important; }
             #formalPrintReport { display: block !important; padding: 0; }
             
-            /* Cover Page Formatting - Mathematically spaced for A4 */
+            /* Cover Page Formatting - Mathematically locked to prevent bleeding */
             .cover-page { 
                 display: flex; flex-direction: column; justify-content: space-between; 
-                min-height: 250mm; /* Ensures A4 vertical height without breaking */
-                page-break-after: always; padding: 10px 0; box-sizing: border-box;
+                height: 260mm; /* Locks the boundary safely within A4 height */
+                page-break-after: always; padding: 10px 0; box-sizing: border-box; overflow: hidden;
             }
             .report-title { text-align: center; color: #2e7d32; font-size: 30px; font-weight: bold; text-transform: uppercase; border-bottom: 4px solid #2e7d32; padding-bottom: 20px; margin-bottom: 20px; }
             .report-header-info { text-align: center; font-size: 16px; margin-bottom: 30px; font-style: italic; color: #333;}
             .exec-summary-title { font-size: 22px; color: #1976d2; border-bottom: 2px solid #ccc; padding-bottom: 8px; margin-bottom: 15px; font-weight: bold; text-align: center;}
             .exec-summary { font-size: 18px; line-height: 1.8; text-align: justify; margin-bottom: 20px; padding: 0 20px;}
             
-            /* Enhanced Tree Diagram to fill space */
+            /* Enhanced Tree Diagram */
             .tree-diagram { display: flex; flex-direction: column; align-items: center; margin: 20px 0; flex-grow: 1; justify-content: center;}
             .tree-box { border: 2px solid #2e7d32; padding: 18px 30px; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif; text-align: center; background: #f2f9f4; min-width: 350px; font-size: 17px;}
             .tree-box.error { border-color: #d32f2f; background: #ffebee; }
@@ -143,7 +143,7 @@
             .tree-arrow { width: 3px; height: 45px; background: #333; position: relative; margin: 5px 0;}
             .tree-arrow::after { content: ''; position: absolute; bottom: 0; left: -6px; border-width: 10px 8px 0; border-style: solid; border-color: #333 transparent transparent transparent; }
 
-            .definitions-box { font-size: 14px; line-height: 1.6; color: #444; background: #f9f9f9; padding: 20px; border: 1px solid #ddd; text-align: justify; margin-top: 20px;}
+            .definitions-box { font-size: 14px; line-height: 1.6; color: #444; background: #f9f9f9; padding: 20px; border: 1px solid #ddd; text-align: justify; margin: 0; page-break-inside: avoid;}
 
             /* Subsequent Pages */
             .report-section-title { font-size: 19px; color: #1976d2; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 35px; margin-bottom: 15px; font-weight: bold; page-break-after: avoid;}
@@ -241,8 +241,8 @@
                 </div>
                 <div class="chart-container">
                     <div class="header-with-btn">
-                        <h3 style="margin: 0; color: #2e7d32; font-size: 15px;">Cohort Summary - Double Burden Index</h3>
-                        <button class="export-btn" onclick="exportChartAsPNG('dbiChart', 'DBI_Cohort_Chart.png')" style="background-color: #2e7d32;">📥 Download Chart (PNG)</button>
+                        <!-- Removed visible HTML title here, replaced by Chart.js title for PNG export -->
+                        <button class="export-btn" onclick="exportChartAsPNG('dbiChart', 'DBI_Cohort_Chart.png')" style="background-color: #2e7d32; margin-left: auto;">📥 Download Chart (PNG)</button>
                     </div>
                     <div class="chart-wrapper"><canvas id="dbiChart"></canvas></div>
                 </div>
@@ -148311,7 +148311,13 @@
         if (chartInstance) chartInstance.destroy();
         chartInstance = new Chart(document.getElementById('dbiChart').getContext('2d'), { 
             type: 'doughnut', data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, hoverOffset: 12 }] }, 
-            options: { responsive: true, maintainAspectRatio: false, layout: { padding: { bottom: 30 } }, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 12, boxHeight: 12, font: { size: 12, weight: 'bold' }, padding: 15 } } } } 
+            options: { 
+                responsive: true, maintainAspectRatio: false, layout: { padding: { bottom: 30 } }, 
+                plugins: { 
+                    title: { display: true, text: 'Cohort Summary - Double Burden Index', font: { size: 16, weight: 'bold' }, color: '#2e7d32' },
+                    legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 12, boxHeight: 12, font: { size: 12, weight: 'bold' }, padding: 15 } } 
+                } 
+            } 
         });
     }
 
@@ -148421,16 +148427,15 @@
             ctx.save();
             
             // Standardizing text to pure black, Arial, with a smart white background to prevent lines from cutting the text
-            function drawBlackText(text, px, py, alignX, alignY, rot=0) {
+            function drawBlackText(text, px, py, alignX, alignY) {
                 ctx.save();
                 ctx.translate(px, py);
-                ctx.rotate(rot);
-                ctx.font = "bold 13px Arial"; 
+                ctx.font = "bold 14px Arial"; 
                 ctx.textAlign = alignX;
                 ctx.textBaseline = alignY;
                 
                 const lines = text.split('\n');
-                const lineHeight = 15;
+                const lineHeight = 16;
                 
                 // Calculate bounding box for background to "break" the line
                 let maxWidth = 0;
@@ -148463,33 +148468,28 @@
             }
 
             // AXES Labels mapped safely to outer edges
-            drawBlackText('Wt. for Age (+)', x.getPixelForValue(-2), top + 5, 'center', 'top');
-            drawBlackText('Wt. for Age (-)', x.getPixelForValue(-2), bottom - 5, 'center', 'bottom');
-            drawBlackText('Ht. for Age (-)', left + 5, y.getPixelForValue(-2) - 10, 'left', 'bottom');
-            drawBlackText('Ht. for Age (+)', right - 5, y.getPixelForValue(-2) - 10, 'right', 'bottom');
+            drawBlackText('Wt.\nfor Age\n+', x.getPixelForValue(-2), top + 10, 'center', 'top');
+            drawBlackText('Wt.\nfor Age\n-', x.getPixelForValue(-2), bottom - 10, 'center', 'bottom');
+            drawBlackText('Ht.\nfor Age\n-', left + 10, y.getPixelForValue(-2), 'left', 'middle');
+            drawBlackText('Ht.\nfor Age\n+', right - 10, y.getPixelForValue(-2), 'right', 'middle');
             
-            // Calculate exact angle for diagonals natively
-            const px1 = x.getPixelForValue(-2); const py1 = y.getPixelForValue(-2);
-            const px2 = x.getPixelForValue(2); const py2 = y.getPixelForValue(2);
-            const lineAngle = Math.atan2(py2 - py1, px2 - px1);
-            
-            // Diagonal Labels aligned perfectly over the lines without being cut
-            drawBlackText('Wt. for Ht.\n(+2SD)', x.getPixelForValue(3.8), y.getPixelForValue(5.8), 'right', 'bottom', lineAngle);
-            drawBlackText('Wt. for Ht.\n(-2SD)', x.getPixelForValue(5.8), y.getPixelForValue(3.8), 'right', 'bottom', lineAngle);
-            drawBlackText('Wt. for Ht.\n(+2SD)', x.getPixelForValue(-9.5), y.getPixelForValue(-7.5), 'left', 'top', lineAngle);
-            drawBlackText('Wt. for Ht.\n(-2SD)', x.getPixelForValue(-7.5), y.getPixelForValue(-9.5), 'left', 'top', lineAngle);
+            // Diagonal Labels aligned perfectly horizontally near the ends of the lines
+            drawBlackText('Wt.\nfor Ht.\n+2SD', x.getPixelForValue(3.8), y.getPixelForValue(6), 'right', 'bottom');
+            drawBlackText('Wt.\nfor Ht.\n-2SD', x.getPixelForValue(6), y.getPixelForValue(3.8), 'right', 'bottom');
+            drawBlackText('Wt.\nfor Ht.\n+2SD', x.getPixelForValue(-9.5), y.getPixelForValue(-7.5), 'left', 'top');
+            drawBlackText('Wt.\nfor Ht.\n-2SD', x.getPixelForValue(-7.5), y.getPixelForValue(-9.5), 'left', 'top');
 
-            // Clean black category text mapped EXACTLY to the locations in the user's Green Boxes
-            drawBlackText('A\nNormal', x.getPixelForValue(2.5), y.getPixelForValue(2.5), 'center', 'middle');
-            drawBlackText('B\nWasting', x.getPixelForValue(4.5), y.getPixelForValue(-1), 'center', 'middle');
-            drawBlackText('C\nUnderweight\n+ Wasting', x.getPixelForValue(2), y.getPixelForValue(-5), 'center', 'middle');
-            drawBlackText('D\nUnderweight\n+ Stunting +\nWasting', x.getPixelForValue(-4), y.getPixelForValue(-6.5), 'center', 'middle');
-            drawBlackText('E\nUnderweight\n+ Stunting', x.getPixelForValue(-4), y.getPixelForValue(-4), 'center', 'middle');
-            drawBlackText('F\nOnly\nStunting', x.getPixelForValue(-3.5), y.getPixelForValue(-0.5), 'center', 'middle');
-            drawBlackText('G\nOnly\nUnderweight', x.getPixelForValue(-0.5), y.getPixelForValue(-3), 'center', 'middle');
-            drawBlackText('H\nStunting +\nOverweight /\nObesity', x.getPixelForValue(-5), y.getPixelForValue(2), 'center', 'middle');
-            drawBlackText('I\nOnly\nOverweight /\nObesity', x.getPixelForValue(1.5), y.getPixelForValue(5), 'center', 'middle');
-            drawBlackText('J\nUnderweight\n+ Stunting +\nOverweight /\nObesity', x.getPixelForValue(-8.5), y.getPixelForValue(-2.5), 'center', 'middle');
+            // Single letters A-J Only, mapped EXACTLY to the locations in the user's reference image
+            drawBlackText('A', x.getPixelForValue(2.5), y.getPixelForValue(2.5), 'center', 'middle');
+            drawBlackText('B', x.getPixelForValue(4.5), y.getPixelForValue(-1), 'center', 'middle');
+            drawBlackText('C', x.getPixelForValue(2), y.getPixelForValue(-5), 'center', 'middle');
+            drawBlackText('D', x.getPixelForValue(-4), y.getPixelForValue(-6.5), 'center', 'middle');
+            drawBlackText('E', x.getPixelForValue(-4), y.getPixelForValue(-4), 'center', 'middle');
+            drawBlackText('F', x.getPixelForValue(-3.5), y.getPixelForValue(-0.5), 'center', 'middle');
+            drawBlackText('G', x.getPixelForValue(-0.5), y.getPixelForValue(-3), 'center', 'middle');
+            drawBlackText('H', x.getPixelForValue(-5), y.getPixelForValue(2), 'center', 'middle');
+            drawBlackText('I', x.getPixelForValue(1.5), y.getPixelForValue(5), 'center', 'middle');
+            drawBlackText('J', x.getPixelForValue(-8.5), y.getPixelForValue(-2.5), 'center', 'middle');
             
             ctx.restore();
         }
@@ -148603,12 +148603,12 @@
             scatterDatasets[cat].data.push({ x: coords.x, y: coords.y, child: r.child || "Unnamed", id: r.id });
         });
 
-        // SYMMETRICAL BOUNDS: -10 to +6 perfectly centers -2
+        // SYMMETRICAL BOUNDS: -10 to +6 perfectly centers -2. Lines are now SOLID (borderDash removed).
         let frameworkLines = [
             { type: 'line', label: 'HAZ = -2 Axis', data: [{x:-10, y:-2}, {x:6, y:-2}], borderColor: '#555', borderWidth: 1.5, pointRadius: 0, fill: false },
             { type: 'line', label: 'WAZ = -2 Axis', data: [{x:-2, y:-10}, {x:-2, y:6}], borderColor: '#555', borderWidth: 1.5, pointRadius: 0, fill: false },
-            { type: 'line', label: 'WHZ = +2 Diagonal', data: [{x:-10, y:-8}, {x:4, y:6}], borderColor: '#555', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0, fill: false },
-            { type: 'line', label: 'WHZ = -2 Diagonal', data: [{x:-8, y:-10}, {x:6, y:4}], borderColor: '#555', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0, fill: false }
+            { type: 'line', label: 'WHZ = +2 Diagonal', data: [{x:-10, y:-8}, {x:4, y:6}], borderColor: '#555', borderWidth: 1.5, pointRadius: 0, fill: false },
+            { type: 'line', label: 'WHZ = -2 Diagonal', data: [{x:-8, y:-10}, {x:6, y:4}], borderColor: '#555', borderWidth: 1.5, pointRadius: 0, fill: false }
         ];
 
         let finalDatasets = frameworkLines.concat(Object.values(scatterDatasets).filter(d => d.data.length > 0));
@@ -148621,7 +148621,7 @@
                 responsive: true, maintainAspectRatio: false,
                 animation: false,
                 layout: {
-                    padding: 40 // IMPORTANT: Protects boundary text from being clipped by the canvas edge
+                    padding: 40 // Protects boundary text from being clipped by the canvas edge
                 },
                 scales: {
                     x: { display: false, min: -10, max: 6 },
@@ -148683,7 +148683,9 @@
     }
 
     function exportTableToCSV() {
-        let csv = []; let rows = document.querySelectorAll("#exportTable tr");
+        let csv = []; 
+        csv.push('"Classification Table"'); // Inject required title in the first row
+        let rows = document.querySelectorAll("#exportTable tr");
         for (let i = 0; i < rows.length; i++) { let row = [], cols = rows[i].querySelectorAll("td, th"); for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].textContent + '"'); csv.push(row.join(",")); }
         let csvFile = new Blob([csv.join("\n")], { type: "text/csv" }); let downloadLink = document.createElement("a"); downloadLink.download = "DBI_Summary_Report.csv"; downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
     }
