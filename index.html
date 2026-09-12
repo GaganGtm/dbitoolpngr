@@ -121,12 +121,14 @@
             .sticky-top, .tab-container, .tab-wrapper { display: none !important; }
             #formalPrintReport { display: block !important; padding: 0; }
             
-            /* Structural Print Pages - Dynamically stretches to fill exact A4 Height */
+            /* Structural Print Pages - Locked width stops browser auto-rotate */
             .print-page { 
                 display: flex; flex-direction: column; justify-content: flex-start; 
-                min-height: 260mm; page-break-after: always; box-sizing: border-box; overflow: hidden;
-                width: 100%; max-width: 186mm; margin: 0 auto;
+                min-height: 250mm; page-break-after: always; box-sizing: border-box; overflow: hidden;
+                width: 100%; max-width: 175mm; margin: 0 auto;
             }
+            .print-page.no-break { page-break-after: auto; min-height: auto; } /* Prevents blank 7th page */
+            
             .cover-page { justify-content: space-between; }
 
             .report-title { text-align: center; color: #2e7d32; font-size: 28px; font-weight: bold; text-transform: uppercase; border-bottom: 4px solid #2e7d32; padding-bottom: 15px; margin-bottom: 15px; }
@@ -154,17 +156,22 @@
             .report-table th, .report-table td { border: 1px solid #333; padding: 6px 4px; text-align: center; vertical-align: middle; overflow: hidden; word-wrap: break-word;}
             .report-table th { background-color: #1976d2 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
             .report-table tbody tr:nth-child(even) td { background-color: #f4f7fe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
-            .report-table td:nth-child(2), .report-table td:nth-child(3) { text-align: left; }
             
+            /* Alignment Control: Names/Titles left, Numbers center */
+            .report-table td:nth-child(2), .report-table td:nth-child(3) { text-align: left; }
+            .align-left-col td:first-child { text-align: left; } /* For Group column in WAZ/HAZ/WHZ */
+
             /* Master Table Specific Styling */
             .cat-badge { font-weight: bold; color: white !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); text-align: center !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
-            .total-row td, .report-table tbody tr:last-child td { background-color: #e8f5e9 !important; font-weight: bold; border-top: 2px solid #2e7d32 !important; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+            .total-row td { background-color: #e8f5e9 !important; font-weight: bold; border-top: 2px solid #2e7d32 !important; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
             
-            /* Scatter Plot Forced Scale to Prevent Landscape Rotation */
-            .chart-print-container { width: 100%; text-align: center; margin: 0 auto 5px auto; page-break-inside: avoid; display: block; max-width: 180mm;}
-            .chart-print-container img { width: 100%; max-width: 180mm; max-height: 120mm; object-fit: contain;}
+            /* Expanded Scatter Plot Formatted for Page 6 */
+            .chart-print-container { width: 100%; text-align: center; margin: 0 auto 5px auto; page-break-inside: avoid; display: block; max-width: 175mm;}
+            .chart-print-container img { width: 100%; max-width: 175mm; max-height: 160mm; object-fit: contain;}
 
             .methodology-box { background: #f4f7fe !important; border-left: 5px solid #1976d2; padding: 15px; font-size: 12px; line-height: 1.5; margin-top: auto; page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+            
+            .print-footer { text-align: center; font-size: 11px; margin-top: 10px; color: #555; padding-top: 5px; font-weight: bold;}
         }
     </style>
 </head>
@@ -407,7 +414,7 @@
         <div class="print-page">
             <div class="report-section-title" style="margin-top: 0;">1. Weight-for-Age (WAZ) - Underweight Analysis</div>
             <div class="chart-print-container"><img id="printWazImg" src="" /></div>
-            <table class="report-table">
+            <table class="report-table align-left-col">
                 <thead>
                     <tr>
                         <th style="width: 16%;">Group</th><th style="width: 16%;">N</th><th style="width: 22%;">Total Underweight (<-2 SD)</th><th style="width: 24%;">Moderate Underweight (<-2 and >=-3 SD)</th><th style="width: 22%;">Severe Underweight (<-3 SD)</th>
@@ -421,7 +428,7 @@
         <div class="print-page">
             <div class="report-section-title" style="margin-top: 0;">2. Height-for-Age (HAZ) - Stunting Analysis</div>
             <div class="chart-print-container"><img id="printHazImg" src="" /></div>
-            <table class="report-table">
+            <table class="report-table align-left-col">
                 <thead>
                     <tr>
                         <th style="width: 16%;">Group</th><th style="width: 16%;">N</th><th style="width: 22%;">Total Stunting (<-2 SD)</th><th style="width: 24%;">Moderate Stunting (<-2 and >=-3 SD)</th><th style="width: 22%;">Severe Stunting (<-3 SD)</th>
@@ -435,7 +442,7 @@
         <div class="print-page">
             <div class="report-section-title" style="margin-top: 0;">3. Weight-for-Height (WHZ) - Wasting & Obesity Analysis</div>
             <div class="chart-print-container"><img id="printWhzImg" src="" /></div>
-            <table class="report-table">
+            <table class="report-table align-left-col">
                 <thead>
                     <tr>
                         <th style="width: 15%;">Group</th><th style="width: 10%;">N</th><th style="width: 20%;">Total Wasting (<-2 SD)</th><th style="width: 18%;">Severe Wasting (<-3 SD)</th><th style="width: 18%;">Overweight (>+2 SD)</th><th style="width: 19%;">Obesity (>+3 SD)</th>
@@ -446,7 +453,7 @@
         </div>
 
         <!-- PAGE 6: Scatter Plot & Formal Methodology -->
-        <div class="print-page">
+        <div class="print-page no-break">
             <div class="report-section-title" style="margin-top: 0;">4. Conceptual Density Plot - Double Burden Index</div>
             <div class="chart-print-container"><img id="printScatterImg" src="" /></div>
             
@@ -459,6 +466,7 @@
                     <li><strong>Scatter Plot Density:</strong> The 2-dimensional scatter visualization maps the linear relationship between WAZ, HAZ, and WHZ intersecting precisely at the -2 SD clinical thresholds.</li>
                 </ul>
             </div>
+            <div class="print-footer">&copy; 2026 Phadke, Gautam, Nair, and Rade. All rights reserved.</div>
         </div>
     </div>
 
@@ -148466,7 +148474,7 @@
     }
 
     function formatLineHTML(label, count, n, metrics) {
-        return `<tr><td style="padding: 2px 0;">${label}</td><td>(n=${n}):</td><td style="font-weight: normal;">(${count})</td><td>${metrics.str}</td><td style="text-align: right; font-weight: normal; white-space: nowrap;">(${metrics.ci} 95% CI)</td></tr>`;
+        return `<tr><td style="padding: 2px 0; text-align: left;">${label}</td><td>(n=${n}):</td><td style="font-weight: normal; text-align: center;">(${count})</td><td style="text-align: center;">${metrics.str}</td><td style="text-align: center; font-weight: normal; white-space: nowrap;">(${metrics.ci} 95% CI)</td></tr>`;
     }
 
     // --- EXACT COPY OF USER'S HORIZONTAL TEXT FRAMEWORK (Lines shortened to avoid crossing text) ---
@@ -148894,7 +148902,7 @@
 
             dbiHtml += `<tr>
                 <td>${i+1}</td><td class="cat-badge" style="background-color:${st.bg};">${cat}</td><td>${d.text}</td>
-                <td><strong>${st.n} (${res.pct})</strong><br><i>${res.ci}</i></td>
+                <td><strong>${st.n} <br> (${res.pct})</strong><br><i>${res.ci}</i></td>
                 <td>${st.boys}<br>(${pB}%)</td><td>${st.girls}<br>(${pG}%)</td>
                 <td>${st.a0_5}<br>(${p0}%)</td><td>${st.a6_23}<br>(${p6}%)</td><td>${st.a24_59}<br>(${p24}%)</td>
             </tr>`;
@@ -148910,20 +148918,23 @@
 
         document.getElementById('reportDBITableBody').innerHTML = dbiHtml;
 
-        let makeRowW = (label, data) => `<tr><td><strong>${label}</strong></td><td>${data.n}</td><td>${data.u} (${getPrevStr(data.u, data.n).pct})</td><td>${data.mu} (${getPrevStr(data.mu, data.n).pct})</td><td>${data.su} (${getPrevStr(data.su, data.n).pct})</td></tr>`;
+        let makeRowW = (label, data, isTotal=false) => `<tr ${isTotal ? 'class="total-row"' : ''}><td><strong>${label}</strong></td><td>${data.n}</td><td>${data.u} (${getPrevStr(data.u, data.n).pct})</td><td>${data.mu} (${getPrevStr(data.mu, data.n).pct})</td><td>${data.su} (${getPrevStr(data.su, data.n).pct})</td></tr>`;
         document.getElementById('reportWazTableBody').innerHTML = 
-            makeRowW('Total', wazStats.total) + makeRowW('Boys', wazStats.boys) + makeRowW('Girls', wazStats.girls) +
-            makeRowW('0-5 months', wazStats.a0_5) + makeRowW('6-23 months', wazStats.a6_23) + makeRowW('24-59 months', wazStats.a24_59);
+            makeRowW('Boys', wazStats.boys) + makeRowW('Girls', wazStats.girls) +
+            makeRowW('0-5 months', wazStats.a0_5) + makeRowW('6-23 months', wazStats.a6_23) + makeRowW('24-59 months', wazStats.a24_59) +
+            makeRowW('Total', wazStats.total, true);
 
-        let makeRowH = (label, data) => `<tr><td><strong>${label}</strong></td><td>${data.n}</td><td>${data.s} (${getPrevStr(data.s, data.n).pct})</td><td>${data.ms} (${getPrevStr(data.ms, data.n).pct})</td><td>${data.ss} (${getPrevStr(data.ss, data.n).pct})</td></tr>`;
+        let makeRowH = (label, data, isTotal=false) => `<tr ${isTotal ? 'class="total-row"' : ''}><td><strong>${label}</strong></td><td>${data.n}</td><td>${data.s} (${getPrevStr(data.s, data.n).pct})</td><td>${data.ms} (${getPrevStr(data.ms, data.n).pct})</td><td>${data.ss} (${getPrevStr(data.ss, data.n).pct})</td></tr>`;
         document.getElementById('reportHazTableBody').innerHTML = 
-            makeRowH('Total', hazStats.total) + makeRowH('Boys', hazStats.boys) + makeRowH('Girls', hazStats.girls) +
-            makeRowH('0-5 months', hazStats.a0_5) + makeRowH('6-23 months', hazStats.a6_23) + makeRowH('24-59 months', hazStats.a24_59);
+            makeRowH('Boys', hazStats.boys) + makeRowH('Girls', hazStats.girls) +
+            makeRowH('0-5 months', hazStats.a0_5) + makeRowH('6-23 months', hazStats.a6_23) + makeRowH('24-59 months', hazStats.a24_59) + 
+            makeRowH('Total', hazStats.total, true);
 
-        let makeRowWhz = (label, data) => `<tr><td><strong>${label}</strong></td><td>${data.n}</td><td>${data.w} (${getPrevStr(data.w, data.n).pct})</td><td>${data.sw} (${getPrevStr(data.sw, data.n).pct})</td><td>${data.ov} (${getPrevStr(data.ov, data.n).pct})</td><td>${data.ob} (${getPrevStr(data.ob, data.n).pct})</td></tr>`;
+        let makeRowWhz = (label, data, isTotal=false) => `<tr ${isTotal ? 'class="total-row"' : ''}><td><strong>${label}</strong></td><td>${data.n}</td><td>${data.w} (${getPrevStr(data.w, data.n).pct})</td><td>${data.sw} (${getPrevStr(data.sw, data.n).pct})</td><td>${data.ov} (${getPrevStr(data.ov, data.n).pct})</td><td>${data.ob} (${getPrevStr(data.ob, data.n).pct})</td></tr>`;
         document.getElementById('reportWhzTableBody').innerHTML = 
-            makeRowWhz('Total', whzStats.total) + makeRowWhz('Boys', whzStats.boys) + makeRowWhz('Girls', whzStats.girls) +
-            makeRowWhz('0-5 months', whzStats.a0_5) + makeRowWhz('6-23 months', whzStats.a6_23) + makeRowWhz('24-59 months', whzStats.a24_59);
+            makeRowWhz('Boys', whzStats.boys) + makeRowWhz('Girls', whzStats.girls) +
+            makeRowWhz('0-5 months', whzStats.a0_5) + makeRowWhz('6-23 months', whzStats.a6_23) + makeRowWhz('24-59 months', whzStats.a24_59) + 
+            makeRowWhz('Total', whzStats.total, true);
 
         // Allow tiny delay for images to populate before firing print dialog
         setTimeout(() => window.print(), 300);
