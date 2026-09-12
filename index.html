@@ -121,13 +121,13 @@
             .sticky-top, .tab-container, .tab-wrapper { display: none !important; }
             #formalPrintReport { display: block !important; padding: 0; }
             
-            /* Structural Print Pages - Locked width stops browser auto-rotate */
+            /* Structural Print Pages - Locked width mathematically prevents auto-landscape */
             .print-page { 
                 display: flex; flex-direction: column; justify-content: flex-start; 
                 min-height: 250mm; page-break-after: always; box-sizing: border-box; overflow: hidden;
                 width: 100%; max-width: 175mm; margin: 0 auto;
             }
-            .print-page.no-break { page-break-after: auto; min-height: auto; } /* Prevents blank 7th page */
+            .print-page.no-break { page-break-after: auto; min-height: auto; }
             
             .cover-page { justify-content: space-between; }
 
@@ -145,7 +145,7 @@
 
             .definitions-box { font-size: 13px; line-height: 1.5; color: #444; background: #f9f9f9; padding: 15px; border: 1px solid #ddd; text-align: justify; margin: 0; page-break-inside: avoid;}
 
-            .report-section-title { font-size: 18px; color: #1976d2; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 5px; margin-bottom: 15px; font-weight: bold; page-break-after: avoid;}
+            .report-section-title { font-size: 18px; color: #1976d2; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 25px; margin-bottom: 15px; font-weight: bold; page-break-after: avoid;}
             
             /* Universal Colorful Tables - Elastic vertical stretching to fill space */
             .report-table { 
@@ -157,14 +157,16 @@
             .report-table th { background-color: #1976d2 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
             .report-table tbody tr:nth-child(even) td { background-color: #f4f7fe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
             
-            /* Alignment Control: Names/Titles left, Numbers center */
+            /* Strict Alignment Control: Text Left, Numbers Center */
             .report-table td:nth-child(2), .report-table td:nth-child(3) { text-align: left; }
-            .align-left-col td:first-child { text-align: left; } /* For Group column in WAZ/HAZ/WHZ */
+            .align-left-col td:nth-child(1) { text-align: left; } /* For Group column in WAZ/HAZ/WHZ */
 
-            /* Master Table Specific Styling */
+            /* Specific Highlighting */
             .cat-badge { font-weight: bold; color: white !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); text-align: center !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
-            .total-row td { background-color: #e8f5e9 !important; font-weight: bold; border-top: 2px solid #2e7d32 !important; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
-            
+            .total-row td { background-color: #e8f5e9 !important; font-weight: bold; border-top: 2px solid #2e7d32 !important; color: #000; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+            .total-row td:first-child { text-align: right; } /* Specifically align 'Total:' label right if it spans */
+            .align-left-col .total-row td:first-child { text-align: left; } /* Keep Group name left aligned */
+
             /* Expanded Scatter Plot Formatted for Page 6 */
             .chart-print-container { width: 100%; text-align: center; margin: 0 auto 5px auto; page-break-inside: avoid; display: block; max-width: 175mm;}
             .chart-print-container img { width: 100%; max-width: 175mm; max-height: 160mm; object-fit: contain;}
@@ -274,11 +276,12 @@
         <!-- TAB 3: GRAPHS -->
         <div id="stats" class="tab-content" style="border-color: #673ab7; background-color: #ede7f6;">
             
+            <!-- MASTER TOGGLE CONTROLS EVERYTHING -->
             <div class="exclusion-toggle-bar">
                 <div class="toggle-options">
                     <span>Analysis Data Mode:</span>
-                    <label><input type="radio" name="exclToggle" id="toggleTotal" value="total" checked onchange="generatePopulationStats()"> Total (No Exclusion)</label>
-                    <label><input type="radio" name="exclToggle" id="toggleExcl" value="exclude" onchange="generatePopulationStats()"> Excluding WHO Flags</label>
+                    <label><input type="radio" name="exclToggle" id="toggleTotal" value="total" checked onchange="updateAllDashboards()"> Total (No Exclusion)</label>
+                    <label><input type="radio" name="exclToggle" id="toggleExcl" value="exclude" onchange="updateAllDashboards()"> Excluding WHO Flags</label>
                 </div>
                 <button class="export-btn" style="background-color: #673ab7; font-size: 14px; padding: 8px 15px;" onclick="preparePrintReport()">🖨️ Download Detailed PDF Report</button>
             </div>
@@ -148029,8 +148032,15 @@
         
         document.getElementById('mainHeaderTitle').style.backgroundColor = themeColor;
         
-        if(tabId === 'summary') generateSummary();
-        if(tabId === 'stats') generatePopulationStats();
+        // Ensure both update properly when clicking tabs
+        if(tabId === 'summary' || tabId === 'stats') {
+            updateAllDashboards();
+        }
+    }
+    
+    function updateAllDashboards() {
+        generatePopulationStats();
+        generateSummary();
     }
 
     function createEmptyRow(id) {
@@ -148304,6 +148314,7 @@
                 prog.style.color = "#2e7d32";
                 document.getElementById('csvFileInput').value = ""; 
                 worker.terminate();
+                updateAllDashboards();
             }
         };
 
@@ -148338,6 +148349,8 @@
         let counts = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, I:0, J:0, Over5:0, Missing:0, Implausible:0, Error:0 }; 
         let validTotal = 0; let grandTotal = 0;
         
+        let excludeFlags = document.getElementById('toggleExcl').checked;
+        
         globalData.forEach(r => {
             let val = r.calc.dbi.trim(); 
             if(!r.fac && !r.child && !r.sDate && !r.bDate && !r.gender && r.wt==="" && r.ht==="") return;
@@ -148346,7 +148359,17 @@
             let isClassified = val.match(/^[A-J] \(/) !== null;
             let firstChar = isClassified ? val.charAt(0) : "";
 
-            if (isClassified) { counts[firstChar]++; validTotal++; grandTotal++; } 
+            if (isClassified) { 
+                if (excludeFlags) {
+                    let isFlagged = (r.calc.rawWaz < -6 || r.calc.rawWaz > 5 || r.calc.rawHaz < -6 || r.calc.rawHaz > 6 || r.calc.rawWhz < -5 || r.calc.rawWhz > 5);
+                    if (isFlagged) {
+                        counts.Implausible++; 
+                        grandTotal++;
+                        return; // Exclude from valid classification counts
+                    }
+                }
+                counts[firstChar]++; validTotal++; grandTotal++; 
+            } 
             else if(val.includes("> 5 years")) { counts.Over5++; grandTotal++; } 
             else if(val.includes("Implausible")) { counts.Implausible++; grandTotal++; } 
             else if(val.includes("Missing")) { counts.Missing++; grandTotal++; } 
@@ -148374,7 +148397,7 @@
         document.getElementById('secondarySummaryBody').innerHTML = `
             <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">DBI Classified</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('classified')" title="Click to download this list">${validTotal}</a></td></tr>
             <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Children age > 5 years</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('over5')" title="Click to download this list">${counts.Over5}</a></td></tr>
-            <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Implausible data</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('implausible')" title="Click to download this list">${counts.Implausible}</a></td></tr>
+            <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Implausible data ${excludeFlags ? '(Includes WHO Flags)' : ''}</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('implausible')" title="Click to download this list">${counts.Implausible}</a></td></tr>
             <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Missing Information</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('missing')" title="Click to download this list">${counts.Missing}</a></td></tr>
             <tr><td style="font-weight:bold; padding: 10px; border: 1px solid #ccc; text-align: left;">Data entry error</td><td style="text-align:center; border: 1px solid #ccc;"><a class="dl-link" onclick="downloadSpecificCSV('error')" title="Click to download this list">${counts.Error}</a></td></tr>
             <tr style="background:#2e7d32; color:white; font-weight:bold"><td style="padding: 10px; border: 1px solid #ccc; text-align: left;">Total Rows Evaluated</td><td style="text-align:center; border: 1px solid #ccc;">${grandTotal}</td></tr>`;
@@ -148477,7 +148500,6 @@
         return `<tr><td style="padding: 2px 0; text-align: left;">${label}</td><td>(n=${n}):</td><td style="font-weight: normal; text-align: center;">(${count})</td><td style="text-align: center;">${metrics.str}</td><td style="text-align: center; font-weight: normal; white-space: nowrap;">(${metrics.ci} 95% CI)</td></tr>`;
     }
 
-    // --- EXACT COPY OF USER'S HORIZONTAL TEXT FRAMEWORK (Lines shortened to avoid crossing text) ---
     const customFrameworkPlugin = {
         id: 'frameworkLabelsPlugin',
         beforeDraw: (chart) => {
@@ -148518,19 +148540,16 @@
                 ctx.restore();
             }
 
-            // AXES Labels mapped safely to absolute outer edges
             drawBlackText('Wt.\nfor Age\n+', x.getPixelForValue(-2), top + 10, 'center', 'top');
             drawBlackText('Wt.\nfor Age\n-', x.getPixelForValue(-2), bottom - 10, 'center', 'bottom');
             drawBlackText('Ht.\nfor Age\n-', left + 10, y.getPixelForValue(-2), 'left', 'middle');
             drawBlackText('Ht.\nfor Age\n+', right - 10, y.getPixelForValue(-2), 'right', 'middle');
             
-            // Diagonal Labels aligned perfectly horizontally near the ends of the lines
             drawBlackText('Wt.\nfor Ht.\n+2SD', x.getPixelForValue(3.5), y.getPixelForValue(5.5), 'right', 'bottom');
             drawBlackText('Wt.\nfor Ht.\n-2SD', x.getPixelForValue(5.5), y.getPixelForValue(3.5), 'right', 'bottom');
             drawBlackText('Wt.\nfor Ht.\n+2SD', x.getPixelForValue(-9.5), y.getPixelForValue(-7.5), 'left', 'top');
             drawBlackText('Wt.\nfor Ht.\n-2SD', x.getPixelForValue(-7.5), y.getPixelForValue(-9.5), 'left', 'top');
 
-            // Single letters A-J Only, explicitly placed where they belong mathematically
             drawBlackText('A', x.getPixelForValue(2.5), y.getPixelForValue(2.5), 'center', 'middle');
             drawBlackText('B', x.getPixelForValue(4.5), y.getPixelForValue(-1), 'center', 'middle');
             drawBlackText('C', x.getPixelForValue(2), y.getPixelForValue(-5), 'center', 'middle');
@@ -148620,7 +148639,6 @@
         
         ['A','B','C','D','E','F','G','H','I','J'].forEach(cat => {
             let catData = rawScatterData.filter(r => r.calc.dbi.charAt(0) === cat);
-            // Strict mathematical proportionality - NO ARTIFICIAL FLOOR
             let sampleSize = Math.round(catData.length * sampleRate); 
             
             let step = sampleSize > 0 ? (catData.length / sampleSize) : 1;
@@ -148644,14 +148662,13 @@
                 if (cat === 'C') valid = (x >= -1.9 && y < -2.1 && y < x - 2.1);
                 if (cat === 'D') valid = (x < -2.1 && y < -2.1 && y < x - 2.1);
                 if (cat === 'E') valid = (x < -2.1 && y < -2.1 && y >= x - 1.9 && y <= x + 1.9);
-                if (cat === 'F') valid = (x < -2.1 && y >= -1.9 && y <= -0.2 && y <= x + 1.9); // Strict F Boundary
-                if (cat === 'G') valid = (x >= -1.9 && x <= -0.2 && y < -2.1 && y >= x - 1.9); // Strict G Boundary
+                if (cat === 'F') valid = (x < -2.1 && y >= -1.9 && y <= -0.2 && y <= x + 1.9); 
+                if (cat === 'G') valid = (x >= -1.9 && x <= -0.2 && y < -2.1 && y >= x - 1.9); 
                 if (cat === 'H') valid = (x < -2.1 && y >= -1.9 && y > x + 2.1);
                 if (cat === 'I') valid = (x >= -1.9 && y >= -1.9 && y > x + 2.1);
                 if (cat === 'J') valid = (x < -2.1 && y < -2.1 && y > x + 2.1);
                 if (valid) return {x, y};
             }
-            // Absolute fallbacks physically verified to be exactly within bounds
             const fb = {'A':{x:2,y:2}, 'B':{x:4,y:-1}, 'C':{x:2,y:-5}, 'D':{x:-5,y:-8}, 'E':{x:-5.5,y:-5.5}, 'F':{x:-2.7,y:-1.3}, 'G':{x:-1.3,y:-2.7}, 'H':{x:-5,y:2}, 'I':{x:1.5,y:5}, 'J':{x:-8.5,y:-2.5}};
             return fb[cat];
         }
@@ -148662,7 +148679,6 @@
             scatterDatasets[cat].data.push({ x: coords.x, y: coords.y, child: r.child || "Unnamed", id: r.id });
         });
 
-        // MATHEMATICALLY SHORTENED LINES: These stop explicitly before hitting the text boxes. SOLID lines.
         let frameworkLines = [
             { type: 'line', label: 'HAZ = -2 Axis', data: [{x:-8.5, y:-2}, {x:4.5, y:-2}], borderColor: '#555', borderWidth: 1.5, pointRadius: 0, fill: false },
             { type: 'line', label: 'WAZ = -2 Axis', data: [{x:-2, y:-8.5}, {x:-2, y:4.5}], borderColor: '#555', borderWidth: 1.5, pointRadius: 0, fill: false },
@@ -148680,7 +148696,7 @@
                 responsive: true, maintainAspectRatio: false,
                 animation: false,
                 layout: {
-                    padding: 40 // Protects boundary text from being clipped by the canvas edge
+                    padding: 40 
                 },
                 scales: {
                     x: { display: false, min: -10, max: 6 },
@@ -148743,7 +148759,7 @@
 
     function exportTableToCSV() {
         let csv = []; 
-        csv.push('"Classification Table"'); // Inject required title in the first row
+        csv.push('"Classification Table"'); 
         let rows = document.querySelectorAll("#exportTable tr");
         for (let i = 0; i < rows.length; i++) { let row = [], cols = rows[i].querySelectorAll("td, th"); for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].textContent + '"'); csv.push(row.join(",")); }
         let csvFile = new Blob([csv.join("\n")], { type: "text/csv" }); let downloadLink = document.createElement("a"); downloadLink.download = "DBI_Summary_Report.csv"; downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
@@ -148771,8 +148787,9 @@
         document.getElementById('printScatterImg').src = document.getElementById('scatterChart').toDataURL('image/png');
 
         let totalUploaded = 0; let totalErrors = 0; let whoFlagsCount = 0;
-        
         let cleanCohort = [];
+        
+        let excludeFlags = document.getElementById('toggleExcl').checked;
         
         globalData.forEach(r => {
             if(!r.fac && !r.child && !r.sDate && !r.bDate && !r.gender && r.wt==="" && r.ht==="") return;
@@ -148787,15 +148804,14 @@
                 let isFlagged = (r.calc.rawWaz < -6 || r.calc.rawWaz > 5 || r.calc.rawHaz < -6 || r.calc.rawHaz > 6 || r.calc.rawWhz < -5 || r.calc.rawWhz > 5);
                 if (isFlagged) {
                     whoFlagsCount++;
-                } else {
-                    cleanCohort.push(r);
+                    if (excludeFlags) return; 
                 }
+                cleanCohort.push(r);
             }
         });
 
         let nTotal = cleanCohort.length;
         
-        // --- MASTER TABLE BIFURCATION TRACKING ---
         let dbiStats = {};
         ['A','B','C','D','E','F','G','H','I','J'].forEach(cat => {
             dbiStats[cat] = { n:0, boys:0, girls:0, a0_5:0, a6_23:0, a24_59:0, bg: catColors[cat] };
@@ -148833,21 +148849,18 @@
 
             let gStr = isBoy ? 'boys' : 'girls';
 
-            // WAZ tally
             if(r.calc.rawWaz !== null) {
                 let v = r.calc.rawWaz;
                 [wazStats.total, wazStats[gStr], wazStats[group]].forEach(obj => {
                     if(obj){ obj.n++; if(v < -2) obj.u++; if(v < -3) obj.su++; else if(v < -2) obj.mu++; }
                 });
             }
-            // HAZ tally
             if(r.calc.rawHaz !== null) {
                 let v = r.calc.rawHaz;
                 [hazStats.total, hazStats[gStr], hazStats[group]].forEach(obj => {
                     if(obj){ obj.n++; if(v < -2) obj.s++; if(v < -3) obj.ss++; else if(v < -2) obj.ms++; }
                 });
             }
-            // WHZ tally
             if(r.calc.rawWhz !== null) {
                 let v = r.calc.rawWhz;
                 [whzStats.total, whzStats[gStr], whzStats[group]].forEach(obj => {
@@ -148858,17 +148871,21 @@
 
         document.getElementById('reportHeaderDate').innerText = `Published Date: ${new Date().toLocaleDateString()} | Cohort size (N): ${nTotal}`;
 
-        document.getElementById('reportExecSummary').innerHTML = 
-            `This report analyzes the nutritional classification of an initial uploaded dataset of <strong>${totalUploaded} children</strong>. ` +
-            `Following the strict application of WHO biological plausibility exclusions, <strong>${whoFlagsCount}</strong> statistical outliers ` +
-            `and <strong>${totalErrors}</strong> data-entry errors were systematically excluded. The final cleaned epidemiological cohort comprises ` +
-            `<strong>${nTotal} valid children</strong>. The gender distribution includes <strong>${sumBoys} boys</strong> and <strong>${sumGirls} girls</strong>. ` +
+        let summaryText = `This report analyzes the nutritional classification of an initial uploaded dataset of <strong>${totalUploaded} children</strong>. `;
+        if(excludeFlags) {
+            summaryText += `Following the strict application of WHO biological plausibility exclusions, <strong>${whoFlagsCount}</strong> statistical outliers and <strong>${totalErrors}</strong> data-entry errors were systematically excluded. `;
+        } else {
+            summaryText += `Statistical outliers were retained in this analysis as per the user's selected parameters, while <strong>${totalErrors}</strong> data-entry errors were excluded. `;
+        }
+        summaryText += `The final analyzed epidemiological cohort comprises <strong>${nTotal} valid children</strong>. The gender distribution includes <strong>${sumBoys} boys</strong> and <strong>${sumGirls} girls</strong>. ` +
             `The age distribution is as follows: <strong>${sum0_5}</strong> children aged 0–5 months, <strong>${sum6_23}</strong> aged 6–23 months, and <strong>${sum24_59}</strong> aged 24–59 months.`;
+        
+        document.getElementById('reportExecSummary').innerHTML = summaryText;
 
         document.getElementById('reportTreeDiagram').innerHTML = 
             `<div class="tree-box">Total Children Uploaded: ${totalUploaded}</div>
              <div class="tree-arrow"></div>
-             <div class="tree-box error">Excluded: ${totalErrors} (Data Errors) + ${whoFlagsCount} (WHO Flags)</div>
+             <div class="tree-box error">Excluded: ${totalErrors} (Data Errors) + ${excludeFlags ? whoFlagsCount + " (WHO Flags)" : "0 (Outliers Retained)"}</div>
              <div class="tree-arrow"></div>
              <div class="tree-box final">Final Analyzed Cohort: ${nTotal}</div>`;
 
@@ -148908,7 +148925,6 @@
             </tr>`;
         });
         
-        // Append Final Total Row
         dbiHtml += `<tr class="total-row">
             <td colspan="3" style="text-align: right;">Total (A to J):</td>
             <td>${nTotal} (100%)</td>
@@ -148936,7 +148952,6 @@
             makeRowWhz('0-5 months', whzStats.a0_5) + makeRowWhz('6-23 months', whzStats.a6_23) + makeRowWhz('24-59 months', whzStats.a24_59) + 
             makeRowWhz('Total', whzStats.total, true);
 
-        // Allow tiny delay for images to populate before firing print dialog
         setTimeout(() => window.print(), 300);
     }
 </script>
