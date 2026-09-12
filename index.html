@@ -148127,11 +148127,21 @@
 
         if (!sDate || !bDate || !gender || isNaN(w) || isNaN(h)) { out.dbi = "Missing Data"; return out; }
         
-        let sDateObj = new Date(sDate), todayObj = new Date(); todayObj.setHours(0,0,0,0);
-        if (sDateObj > todayObj || sDateObj < new Date(bDate)) { out.dbi = "Date Error"; out.dbiBg = "#ffeb3b"; return out; }
+        let sDateObj = new Date(sDate);
+        let bDateObj = new Date(bDate);
+        let todayObj = new Date(); todayObj.setHours(0,0,0,0);
         
-        let ageDays = Math.floor((sDateObj - new Date(bDate)) / 86400000); 
-        out.ageDays = ageDays; out.ageM = Math.round(ageDays / 30.4375);
+        if (sDateObj > todayObj || sDateObj < bDateObj) { out.dbi = "Date Error"; out.dbiBg = "#ffeb3b"; return out; }
+        
+        // Force absolute UTC calendar math to bypass local timezone/DST shifts (Critical for WHO Anthro Match)
+        let utcSurvey = Date.UTC(sDateObj.getFullYear(), sDateObj.getMonth(), sDateObj.getDate());
+        let utcBirth = Date.UTC(bDateObj.getFullYear(), bDateObj.getMonth(), bDateObj.getDate());
+        
+        let ageDays = Math.floor((utcSurvey - utcBirth) / 86400000); 
+        out.ageDays = ageDays; 
+        
+        // Epidemiological standard: Completed months (truncate, do not round up)
+        out.ageM = Math.floor(ageDays / 30.4375);
         
         if (ageDays > 1856) { out.dbi = "> 5 years"; out.dbiBg = "#ffcc80"; return out; }
         if (h < 45) { out.dbi = "Length < 45cm"; out.dbiBg = "#e0e0e0"; return out; }
@@ -148148,9 +148158,9 @@
         let hazStat = haz < -3 ? "Severely Stunted" : haz < -2 ? "Moderately Stunted" : "Normal";
         let whzStat = whz < -3 ? "SAM" : whz < -2 ? "MAM" : whz >= 2 ? "Obese" : "Normal";
 
-        out.wazZ = waz !== null ? waz.toFixed(3) : "N/A"; out.wazS = waz !== null ? wazStat : "N/A";
-        out.hazZ = haz !== null ? haz.toFixed(3) : "N/A"; out.hazS = haz !== null ? hazStat : "N/A";
-        out.whzZ = whz !== null ? whz.toFixed(3) : "N/A"; out.whzS = whz !== null ? whzStat : "N/A";
+        out.wazZ = waz !== null ? waz.toFixed(2) : "N/A"; out.wazS = waz !== null ? wazStat : "N/A";
+        out.hazZ = haz !== null ? haz.toFixed(2) : "N/A"; out.hazS = haz !== null ? hazStat : "N/A";
+        out.whzZ = whz !== null ? whz.toFixed(2) : "N/A"; out.whzS = whz !== null ? whzStat : "N/A";
 
         if (waz === null || haz === null || whz === null) { out.dbi = "Missing Data"; return out; }
 
@@ -148639,7 +148649,6 @@
         
         ['A','B','C','D','E','F','G','H','I','J'].forEach(cat => {
             let catData = rawScatterData.filter(r => r.calc.dbi.charAt(0) === cat);
-            // Strict mathematical proportionality - NO ARTIFICIAL FLOOR
             let sampleSize = Math.round(catData.length * sampleRate); 
             
             let step = sampleSize > 0 ? (catData.length / sampleSize) : 1;
