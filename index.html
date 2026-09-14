@@ -477,7 +477,8 @@
     document.addEventListener('contextmenu', event => event.preventDefault());
 
     // ==========================================
-    // 1. INSERT YOUR WHO JSON DATA HERE
+    // 1. INSERT YOUR 8 WHO JSON ARRAYS HERE
+    // Paste WFA_BOYS, WFA_GIRLS, HFA_BOYS, HFA_GIRLS, WFL_BOYS, WFL_GIRLS, WFH_BOYS, WFH_GIRLS below
     // ==========================================
     
            const WFA_BOYS = [
@@ -148115,6 +148116,9 @@
         return mapDict[mapId].get(key) || null;
     }
 
+    // ==========================================
+    // REFINED BOUNDARY LOGIC ENGINE
+    // ==========================================
     function calculateLogicFast(fac, child, sDate, bDate, gender, w, h, mapSource = O1_MAPS) {
         let out = { ageDays: -1, ageM: "", wazZ: "", wazS: "", hazZ: "", hazS: "", whzZ: "", whzS: "", dbi: "", dbiBg: "transparent", dbiColor: "black", facBg: "", childBg: "", rawWaz: null, rawHaz: null, rawWhz: null };
         
@@ -148155,29 +148159,49 @@
         let whzMapId = ageDays < 731 ? ('WFL_' + gender) : ('WFH_' + gender);
         let whzData = getLMSFast(mapSource, whzMapId, h, true); if(whzData) { whz = computeZ(w, whzData.L, whzData.M, whzData.S); out.rawWhz = whz; }
 
-        let wazStat = waz < -3 ? "Severely Underweight" : waz < -2 ? "Moderately Underweight" : "Normal";
-        let hazStat = haz < -3 ? "Severely Stunted" : haz < -2 ? "Moderately Stunted" : "Normal";
-        let whzStat = whz < -3 ? "SAM" : whz < -2 ? "MAM" : whz >= 2 ? "Obese" : "Normal";
+        if (waz === null || haz === null || whz === null) { 
+            out.wazZ = "N/A"; out.wazS = "N/A";
+            out.hazZ = "N/A"; out.hazS = "N/A";
+            out.whzZ = "N/A"; out.whzS = "N/A";
+            out.dbi = "Missing Data"; 
+            return out; 
+        }
 
-        out.wazZ = waz !== null ? waz.toFixed(2) : "N/A"; out.wazS = waz !== null ? wazStat : "N/A";
-        out.hazZ = haz !== null ? haz.toFixed(2) : "N/A"; out.hazS = haz !== null ? hazStat : "N/A";
-        out.whzZ = whz !== null ? whz.toFixed(2) : "N/A"; out.whzS = whz !== null ? whzStat : "N/A";
+        // 1. Force strict 2-decimal rounding BEFORE ANY LOGIC evaluates
+        let wazR = Number(waz.toFixed(2));
+        let hazR = Number(haz.toFixed(2));
+        let whzR = Number(whz.toFixed(2));
 
-        if (waz === null || haz === null || whz === null) { out.dbi = "Missing Data"; return out; }
+        // 2. Set Status Strings using the strictly rounded values
+        let wazStat = wazR < -3.00 ? "Severely Underweight" : wazR < -2.00 ? "Moderately Underweight" : "Normal";
+        let hazStat = hazR < -3.00 ? "Severely Stunted" : hazR < -2.00 ? "Moderately Stunted" : "Normal";
+        let whzStat = whzR < -3.00 ? "SAM" : whzR < -2.00 ? "MAM" : whzR >= 2.00 ? "Obese" : "Normal";
 
-        let dbi = "Implausible data";
-        if (wazStat === "Normal" && hazStat === "Normal" && whzStat === "Normal") dbi = "A (Normal)";
-        else if (wazStat === "Normal" && hazStat === "Normal" && (whzStat === "MAM" || whzStat === "SAM")) dbi = "B (Only Wasting)";
-        else if (wazStat === "Normal" && hazStat === "Normal" && whzStat === "Obese") dbi = "I (Only Obese)";
-        else if (wazStat === "Normal" && hazStat.includes("Stunted") && whzStat === "Normal") dbi = "F (Only Stunting)";
-        else if (wazStat === "Normal" && hazStat.includes("Stunted") && whzStat === "Obese") dbi = "H (Stunting + Obese)";
-        else if (wazStat.includes("Underweight") && hazStat === "Normal" && whzStat === "Normal") dbi = "G (Only Underweight)";
-        else if (wazStat.includes("Underweight") && hazStat === "Normal" && (whzStat === "MAM" || whzStat === "SAM")) dbi = "C (Underweight + Wasting)";
-        else if (wazStat.includes("Underweight") && hazStat.includes("Stunted") && whzStat === "Normal") dbi = "E (Underweight + Stunting)";
-        else if (wazStat.includes("Underweight") && hazStat.includes("Stunted") && (whzStat === "MAM" || whzStat === "SAM")) dbi = "D (Underweight + Stunting + Wasting)";
-        else if (wazStat.includes("Underweight") && hazStat.includes("Stunted") && whzStat === "Obese") dbi = "J (Underweight + Stunting + Obese)";
+        out.wazZ = waz.toFixed(2); out.wazS = wazStat;
+        out.hazZ = haz.toFixed(2); out.hazS = hazStat;
+        out.whzZ = whz.toFixed(2); out.whzS = whzStat;
+
+        // 3. Establish binary clinical flags based STRICTLY on -2.00 and +2.00 boundaries
+        const isUnderweight = (wazR < -2.00);
+        const isStunted     = (hazR < -2.00);
+        const isWasted      = (whzR < -2.00);
+        const isOverweight  = (whzR >= 2.00);
+
+        // 4. Evaluate the combinatorial categories (A through J) SIMULTANEOUSLY
+        let dbi = "Error";
+        if (!isUnderweight && !isStunted && !isWasted && !isOverweight) dbi = "A (Normal)";
+        else if (!isUnderweight && !isStunted &&  isWasted) dbi = "B (Only Wasting)";
+        else if (!isUnderweight && !isStunted &&  isOverweight) dbi = "I (Only Obese)";
+        else if (!isUnderweight &&  isStunted && !isWasted && !isOverweight) dbi = "F (Only Stunting)";
+        else if (!isUnderweight &&  isStunted &&  isOverweight) dbi = "H (Stunting + Obese)";
+        else if ( isUnderweight && !isStunted && !isWasted && !isOverweight) dbi = "G (Only Underweight)";
+        else if ( isUnderweight && !isStunted &&  isWasted) dbi = "C (Underweight + Wasting)";
+        else if ( isUnderweight &&  isStunted && !isWasted && !isOverweight) dbi = "E (Underweight + Stunting)";
+        else if ( isUnderweight &&  isStunted &&  isWasted) dbi = "D (Underweight + Stunting + Wasting)";
+        else if ( isUnderweight &&  isStunted &&  isOverweight) dbi = "J (Underweight + Stunting + Obese)";
 
         out.dbi = dbi;
+
         let cKey = dbi.charAt(0);
         if (catColors[cKey]) { out.dbiBg = catColors[cKey]; out.dbiColor = "white"; }
         
