@@ -221,7 +221,7 @@
                 <div class="add-row-btn"><button onclick="addRow()" style="padding: 6px 12px; background-color: #4285f4; color: white; border: none; cursor:pointer; font-weight:bold; border-radius: 4px; font-size: 12px;">+ Add Single Row</button></div>
             </div>
 
-            <div class="bulk-import-container">
+            <div class="bulk-import-container" id="dpdpaUploadSection">
                 <div>
                     <strong>Bulk CSV File Upload (O(1) Engine - 250k rows in < 4s):</strong> Save your massive Excel dataset as a <strong>.csv (Comma delimited)</strong> file. Ensure your columns are arranged in exactly this order without missing any headers:
                     <div style="display: flex; gap: 5px; margin: 8px 0; font-weight: bold; color: #1976d2; flex-wrap: wrap;">
@@ -234,9 +234,29 @@
                         <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Height (cm)</span>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 15px;">
+
+                <!-- Banner for Guest Mode (Local Execution) -->
+                <div id="guestModeBanner" style="background: #e8f5e9; border: 1px solid #4caf50; border-radius: 4px; padding: 10px; font-size: 12px; color: #1b5e20; margin-top: 5px;">
+                    🔒 <strong>Privacy by Design (DPDPA Compliant):</strong> Guest Mode operates 100% locally in your browser. No child health data or personally identifiable information (PII) is transmitted to, stored on, or processed by any external server.
+                </div>
+
+                <!-- Banner & Consent for Registered Users (Backend Storage) -->
+                <div id="registeredConsentBlock" style="display: none; background: #fff3e0; border: 1px solid #ff9800; border-radius: 4px; padding: 12px; font-size: 12px; margin-top: 5px;">
+                    <div style="font-weight: bold; color: #e65100; margin-bottom: 6px;">
+                        ⚠️ Legal Notice: Child Health Data Processing (DPDP Act, 2023)
+                    </div>
+                    <div style="margin-bottom: 10px; color: #333; line-height: 1.4;">
+                        As an authenticated healthcare provider/facility, you are designated as the <strong>Data Fiduciary</strong>. Under Section 9(1) of the Digital Personal Data Protection Act, 2023, processing health metrics of children (< 18 years) requires verifiable consent from parents or legal guardians.
+                    </div>
+                    <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-weight: bold; color: #b71c1c;">
+                        <input type="checkbox" id="dpdpaConsentCheck" onchange="toggleUploadButton()" style="margin-top: 2px; transform: scale(1.2); cursor: pointer;">
+                        <span>I certify that verifiable consent has been obtained from the parent/lawful guardian of each child in this dataset prior to uploading to backend storage.</span>
+                    </label>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 15px; margin-top: 15px;">
                     <input type="file" id="csvFileInput" accept=".csv" style="width: auto; padding: 5px;">
-                    <button onclick="processCSV()" style="background-color: #1976d2; color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 13px;">Upload & Process CSV Data</button>
+                    <button id="btnProcessCsv" onclick="processCSV()" style="background-color: #1976d2; color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 13px;">Upload & Process CSV Data</button>
                     <span id="uploadProgress" style="font-weight: bold; color: #d32f2f;"></span>
                 </div>
             </div>
@@ -147987,6 +148007,51 @@
         "A": "#4caf50", "B": "#e53935", "C": "#ff9800", "D": "#b71c1c", "E": "#ffeb3b", 
         "F": "#00bcd4", "G": "#03a9f4", "H": "#9c27b0", "I": "#e91e63", "J": "#795548"
     };
+
+    // ==========================================
+    // DPDPA COMPLIANCE & AUTHENTICATION TOGGLE
+    // ==========================================
+    let isAuthenticatedUser = false; // Set this to 'true' dynamically when a user logs in
+
+    function initializeComplianceMode() {
+        const guestBanner = document.getElementById('guestModeBanner');
+        const regConsent = document.getElementById('registeredConsentBlock');
+        const uploadBtn = document.getElementById('btnProcessCsv');
+
+        if (isAuthenticatedUser) {
+            // User is logged in: Hide Guest banner, show Consent Checkbox, disable upload initially
+            guestBanner.style.display = 'none';
+            regConsent.style.display = 'block';
+            uploadBtn.disabled = true;
+            uploadBtn.style.opacity = '0.5';
+            uploadBtn.style.cursor = 'not-allowed';
+        } else {
+            // Guest mode: Show Guest banner, hide Consent, allow instant upload
+            guestBanner.style.display = 'block';
+            regConsent.style.display = 'none';
+            uploadBtn.disabled = false;
+            uploadBtn.style.opacity = '1';
+            uploadBtn.style.cursor = 'pointer';
+        }
+    }
+
+    function toggleUploadButton() {
+        const isChecked = document.getElementById('dpdpaConsentCheck').checked;
+        const uploadBtn = document.getElementById('btnProcessCsv');
+        
+        if (isChecked) {
+            uploadBtn.disabled = false;
+            uploadBtn.style.opacity = '1';
+            uploadBtn.style.cursor = 'pointer';
+        } else {
+            uploadBtn.disabled = true;
+            uploadBtn.style.opacity = '0.5';
+            uploadBtn.style.cursor = 'not-allowed';
+        }
+    }
+
+    // Trigger compliance check after DOM loads
+    window.addEventListener('DOMContentLoaded', initializeComplianceMode);
 
     // --- O(1) HASH MAP INITIALIZATION FOR BLAZING FAST LOOKUPS ---
     let O1_MAPS = {};
