@@ -148246,10 +148246,17 @@
         const prog = document.getElementById('uploadProgress');
         prog.innerHTML = "⏳ Reading and Parsing CSV file... Please wait.";
         prog.style.color = "#d32f2f";
+
+        // --- THE CLEAN SLATE FIX ---
+        // 1. Wipe the visual table completely clean
+        document.getElementById('tableBody').innerHTML = '';
+        // 2. Wipe the background array completely clean of the initial empty rows
+        globalData = []; 
+        // ---------------------------
         
         Papa.parse(file, {
             header: false,
-            skipEmptyLines: true,
+            skipEmptyLines: 'greedy', // Changed to greedy to prevent trailing commas/blanks
             complete: function(results) {
                 prog.innerHTML = `⏳ CSV Loaded (${results.data.length} rows). Sending to O(1) background engine...`;
                 setTimeout(() => startWorker(results.data), 100); 
@@ -148279,8 +148286,6 @@
                 });
             }
         });
-
-        if (globalData.length === 10 && globalData.every(r => !r.child && !r.fac && !r.sDate && !r.wt && !r.ht)) globalData = [];
 
         const workerScript = `
             const WFA_BOYS = ${typeof WFA_BOYS !== 'undefined' ? JSON.stringify(WFA_BOYS) : '[]'};
