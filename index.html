@@ -183,6 +183,11 @@
     <div class="sticky-top">
         <div class="header-title" id="mainHeaderTitle">Double Burden Index (DBI) Calculator by Phadke, Gautam, Nair and Rade, 2026</div>
 
+        <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
+            <span id="userStatusLabel" style="font-size: 13px; font-weight: bold; color: #555; margin-right: 10px; align-self: center;">Guest Mode</span>
+            <button id="authModalBtn" onclick="openAuthModal('register')" style="background-color: #1976d2; color: white; border: none; padding: 6px 14px; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 12px;">Login / Register</button>
+        </div>
+
         <div class="tab-container">
             <button class="tab-btn active" id="btn-dataEntry" onclick="switchTab('dataEntry', '#4285f4', '#f4f7fe')" style="border-top: 4px solid #4285f4; color: #4285f4; background-color: #f4f7fe;">DBI Calculator</button>
             <button class="tab-btn" id="btn-summary" onclick="switchTab('summary', '#2e7d32', '#f2f9f4')">DBI Summary</button>
@@ -233,6 +238,11 @@
                         <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Weight (kg)</span>
                         <span style="background: white; padding: 3px 6px; border: 1px solid #1976d2; border-radius: 3px;">Height (cm)</span>
                     </div>
+                </div>
+
+                <!-- Banner for Phase 1 Lockout -->
+                <div id="loginRequiredBanner" style="display: none; background: #ffebee; border: 1px solid #d32f2f; border-radius: 4px; padding: 12px; font-size: 13px; color: #b71c1c; margin-top: 5px; text-align: center; font-weight: bold;">
+                    🛑 Access Restricted: During this initial rollout phase, you must log in to an authorized registered account to process data. Guest access is currently disabled.
                 </div>
 
                 <!-- Banner for Guest Mode (Local Execution) -->
@@ -490,6 +500,66 @@
                 </ul>
             </div>
             <div class="print-footer">&copy; 2026 Phadke, Gautam, Nair, and Rade. All rights reserved.</div>
+        </div>
+    </div>
+
+    <!-- AUTHENTICATION & DPDPA REGISTRATION MODAL -->
+    <div id="authModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: white; width: 100%; max-width: 520px; border-radius: 8px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 id="modalTitle" style="margin: 0; color: #1976d2;">Doctor / Facility Registration</h3>
+                <button onclick="closeAuthModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; font-weight: bold;">&times;</button>
+            </div>
+
+            <!-- Form Toggle -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button id="tabReg" onclick="setAuthTab('register')" style="flex: 1; padding: 8px; font-weight: bold; cursor: pointer; border: 1px solid #1976d2; background: #1976d2; color: white; border-radius: 4px;">Register</button>
+                <button id="tabLog" onclick="setAuthTab('login')" style="flex: 1; padding: 8px; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background: #f0f0f0; color: #333; border-radius: 4px;">Login</button>
+            </div>
+
+            <!-- Registration Fields -->
+            <div id="registrationFields">
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 12px; font-weight: bold;">Doctor / Practitioner Name</label>
+                    <input type="text" id="regName" placeholder="Dr. First Last" style="width: 100%; padding: 6px; font-size: 12px;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 12px; font-weight: bold;">Facility / Clinic / Hospital Name</label>
+                    <input type="text" id="regFacility" placeholder="District Health Center" style="width: 100%; padding: 6px; font-size: 12px;">
+                </div>
+            </div>
+
+            <!-- Common Auth Fields -->
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 12px; font-weight: bold;">Email Address</label>
+                <input type="email" id="authEmail" placeholder="doctor@hospital.org" style="width: 100%; padding: 6px; font-size: 12px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 12px; font-weight: bold;">Password</label>
+                <input type="password" id="authPassword" placeholder="••••••••" style="width: 100%; padding: 6px; font-size: 12px;">
+            </div>
+
+            <!-- DPDPA Section 5 Notice & Section 6 Consent Box (Registration Only) -->
+            <div id="dpdpaNoticeConsentBlock" style="background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 15px;">
+                <div style="font-size: 11px; font-weight: bold; color: #1976d2; margin-bottom: 4px;">
+                    DPDP ACT 2023 STATUTORY NOTICE (SECTION 5):
+                </div>
+                <div style="font-size: 10.5px; color: #555; line-height: 1.4; max-height: 90px; overflow-y: scroll; border: 1px solid #eee; padding: 6px; background: white; margin-bottom: 8px;">
+                    1. <strong>Purpose of Processing:</strong> Your registration details are processed solely to verify your healthcare identity, audit multi-tenant batch uploads, and maintain rate limits.<br>
+                    2. <strong>Role Definition:</strong> You act as the <strong>Data Fiduciary</strong> for all child records processed. The DBI Web Tool operates as a <strong>Data Processor</strong>.<br>
+                    3. <strong>Data Principal Rights (Section 12):</strong> You may request access, correction, or complete erasure of your profile and data records at any time via your account portal.<br>
+                    4. <strong>Data Retention:</strong> Records are stored until account closure or an erasure request is received.
+                </div>
+
+                <label style="display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 11px; font-weight: bold; color: #b71c1c;">
+                    <input type="checkbox" id="dpdpaAccountConsentCheck" onchange="validateRegistrationConsent()" style="margin-top: 2px; transform: scale(1.1); cursor: pointer;">
+                    <span>I have read the DPDPA Notice and unconditionally consent to the processing of my account details. I agree to uphold all statutory parental consent duties under Section 9.</span>
+                </label>
+            </div>
+
+            <!-- Submit Button -->
+            <button id="authSubmitBtn" onclick="submitAuth()" style="width: 100%; background-color: #1976d2; color: white; border: none; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 13px;">Complete Registration</button>
         </div>
     </div>
 
@@ -147996,46 +148066,53 @@
     
 
     // ==========================================
-
-    let chartInstance = null;
-    let wazChartInst = null, hazChartInst = null, whzChartInst = null, scatterChartInst = null;
-    let globalData = [];
-    let currentPage = 1;
-    const rowsPerPage = 500;
-
-    const catColors = {
-        "A": "#4caf50", "B": "#e53935", "C": "#ff9800", "D": "#b71c1c", "E": "#ffeb3b", 
-        "F": "#00bcd4", "G": "#03a9f4", "H": "#9c27b0", "I": "#e91e63", "J": "#795548"
-    };
-
+    // DEPLOYMENT CONTROLS (PHASED ROLLOUT)
     // ==========================================
-    // DPDPA COMPLIANCE & AUTHENTICATION TOGGLE
-    // ==========================================
-    let isAuthenticatedUser = false; // Set this to 'true' dynamically when a user logs in
+    
+    // THE MASTER SWITCH: Set to false for Phase 1. Change to true for Phase 2.
+    const ENABLE_GUEST_MODE = false; 
+    let isAuthenticatedUser = false; 
 
     function initializeComplianceMode() {
         const guestBanner = document.getElementById('guestModeBanner');
         const regConsent = document.getElementById('registeredConsentBlock');
+        const loginRequired = document.getElementById('loginRequiredBanner');
         const uploadBtn = document.getElementById('btnProcessCsv');
 
         if (isAuthenticatedUser) {
-            // User is logged in: Hide Guest banner, show Consent Checkbox, disable upload initially
+            // SCENARIO 1: User is Logged In (Normal operations for both phases)
             guestBanner.style.display = 'none';
-            regConsent.style.display = 'block';
-            uploadBtn.disabled = true;
+            loginRequired.style.display = 'none';
+            regConsent.style.display = 'block'; 
+            
+            uploadBtn.disabled = true; 
             uploadBtn.style.opacity = '0.5';
             uploadBtn.style.cursor = 'not-allowed';
-        } else {
-            // Guest mode: Show Guest banner, hide Consent, allow instant upload
-            guestBanner.style.display = 'block';
+            
+        } else if (!isAuthenticatedUser && !ENABLE_GUEST_MODE) {
+            // SCENARIO 2: PHASE 1 LOCKOUT (Not logged in, guest mode disabled)
+            guestBanner.style.display = 'none';
             regConsent.style.display = 'none';
-            uploadBtn.disabled = false;
+            loginRequired.style.display = 'block'; 
+            
+            uploadBtn.disabled = true; 
+            uploadBtn.style.opacity = '0.5';
+            uploadBtn.style.cursor = 'not-allowed';
+            
+        } else {
+            // SCENARIO 3: PHASE 2 OPEN ACCESS (Not logged in, guest mode enabled)
+            guestBanner.style.display = 'block'; 
+            regConsent.style.display = 'none';
+            loginRequired.style.display = 'none';
+            
+            uploadBtn.disabled = false; 
             uploadBtn.style.opacity = '1';
             uploadBtn.style.cursor = 'pointer';
         }
     }
 
     function toggleUploadButton() {
+        if (!isAuthenticatedUser) return; 
         const isChecked = document.getElementById('dpdpaConsentCheck').checked;
         const uploadBtn = document.getElementById('btnProcessCsv');
         
@@ -148050,10 +148127,124 @@
         }
     }
 
-    // Trigger compliance check after DOM loads
     window.addEventListener('DOMContentLoaded', initializeComplianceMode);
 
-    // --- O(1) HASH MAP INITIALIZATION FOR BLAZING FAST LOOKUPS ---
+    // ==========================================
+    // AUTHENTICATION MODAL LOGIC
+    // ==========================================
+    let currentAuthMode = 'register';
+
+    function openAuthModal(mode) {
+        document.getElementById('authModal').style.display = 'flex';
+        setAuthTab(mode);
+    }
+
+    function closeAuthModal() {
+        document.getElementById('authModal').style.display = 'none';
+    }
+
+    function setAuthTab(mode) {
+        currentAuthMode = mode;
+        const regFields = document.getElementById('registrationFields');
+        const dpdpaBox = document.getElementById('dpdpaNoticeConsentBlock');
+        const title = document.getElementById('modalTitle');
+        const submitBtn = document.getElementById('authSubmitBtn');
+        const tabReg = document.getElementById('tabReg');
+        const tabLog = document.getElementById('tabLog');
+
+        if (mode === 'register') {
+            title.innerText = "Doctor / Facility Registration";
+            submitBtn.innerText = "Complete Registration";
+            regFields.style.display = 'block';
+            dpdpaBox.style.display = 'block';
+            tabReg.style.background = '#1976d2';
+            tabReg.style.color = 'white';
+            tabLog.style.background = '#f0f0f0';
+            tabLog.style.color = '#333';
+            validateRegistrationConsent();
+        } else {
+            title.innerText = "Doctor / Facility Login";
+            submitBtn.innerText = "Sign In";
+            regFields.style.display = 'none';
+            dpdpaBox.style.display = 'none';
+            tabLog.style.background = '#1976d2';
+            tabLog.style.color = 'white';
+            tabReg.style.background = '#f0f0f0';
+            tabReg.style.color = '#333';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        }
+    }
+
+    function validateRegistrationConsent() {
+        if (currentAuthMode !== 'register') return;
+        const isChecked = document.getElementById('dpdpaAccountConsentCheck').checked;
+        const submitBtn = document.getElementById('authSubmitBtn');
+        if (isChecked) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+    }
+
+    function submitAuth() {
+        const email = document.getElementById('authEmail').value.trim();
+        const pass = document.getElementById('authPassword').value.trim();
+
+        if (!email || !pass) {
+            alert("Please enter your email and password.");
+            return;
+        }
+
+        if (currentAuthMode === 'register') {
+            const consentGiven = document.getElementById('dpdpaAccountConsentCheck').checked;
+            if (!consentGiven) {
+                alert("You must consent to the DPDP Act 2023 terms to create an account.");
+                return;
+            }
+            alert(`Account registered successfully under DPDPA guidelines for ${email}!`);
+        } else {
+            alert(`Logged in successfully as ${email}!`);
+        }
+
+        isAuthenticatedUser = true;
+        document.getElementById('userStatusLabel').innerText = `Logged in: ${email}`;
+        document.getElementById('authModalBtn').innerText = "Logout";
+        document.getElementById('authModalBtn').setAttribute("onclick", "logoutUser()");
+        
+        closeAuthModal();
+        initializeComplianceMode();
+    }
+
+    function logoutUser() {
+        isAuthenticatedUser = false;
+        document.getElementById('userStatusLabel').innerText = "Guest Mode";
+        const btn = document.getElementById('authModalBtn');
+        btn.innerText = "Login / Register";
+        btn.setAttribute("onclick", "openAuthModal('register')");
+        initializeComplianceMode();
+    }
+
+    // ==========================================
+    // CORE LOGIC
+    // ==========================================
+
+    let chartInstance = null;
+    let wazChartInst = null, hazChartInst = null, whzChartInst = null, scatterChartInst = null;
+    let globalData = [];
+    let currentPage = 1;
+    const rowsPerPage = 500;
+
+    const catColors = {
+        "A": "#4caf50", "B": "#e53935", "C": "#ff9800", "D": "#b71c1c", "E": "#ffeb3b", 
+        "F": "#00bcd4", "G": "#03a9f4", "H": "#9c27b0", "I": "#e91e63", "J": "#795548"
+    };
+
     let O1_MAPS = {};
     function buildMap(arr, isFloat) {
         const map = new Map();
@@ -148098,7 +148289,6 @@
         
         document.getElementById('mainHeaderTitle').style.backgroundColor = themeColor;
         
-        // Ensure both update properly when clicking tabs
         if(tabId === 'summary' || tabId === 'stats') {
             updateAllDashboards();
         }
@@ -148181,9 +148371,6 @@
         return mapDict[mapId].get(key) || null;
     }
 
-    // ==========================================
-    // REFINED BOUNDARY LOGIC ENGINE
-    // ==========================================
     function calculateLogicFast(fac, child, sDate, bDate, gender, w, h, mapSource = O1_MAPS) {
         let out = { ageDays: -1, ageM: "", wazZ: "", wazS: "", hazZ: "", hazS: "", whzZ: "", whzS: "", dbi: "", dbiBg: "transparent", dbiColor: "black", facBg: "", childBg: "", rawWaz: null, rawHaz: null, rawWhz: null };
         
@@ -148202,23 +148389,19 @@
         
         if (sDateObj > todayObj || sDateObj < bDateObj) { out.dbi = "Date Error"; out.dbiBg = "#ffeb3b"; return out; }
         
-        // Force absolute UTC calendar math to bypass local timezone/DST shifts (Critical for WHO Anthro Match)
         let utcSurvey = Date.UTC(sDateObj.getFullYear(), sDateObj.getMonth(), sDateObj.getDate());
         let utcBirth = Date.UTC(bDateObj.getFullYear(), bDateObj.getMonth(), bDateObj.getDate());
         
         let ageDays = Math.floor((utcSurvey - utcBirth) / 86400000); 
         out.ageDays = ageDays; 
         
-        // Epidemiological standard: Completed months (truncate, do not round up)
         out.ageM = Math.floor(ageDays / 30.4375);
         
-        // Strict cutoff at exactly 5.0 years to perfectly align with WHO Anthro Software output rules
         if (ageDays > 1826) { out.dbi = "> 5 years"; out.dbiBg = "#ffcc80"; return out; }
         if (h < 45) { out.dbi = "Length < 45cm"; out.dbiBg = "#e0e0e0"; return out; }
         
         let waz = null, haz = null, whz = null;
         
-        // O(1) MAP LOOKUP - Blazing fast
         let wfaData = getLMSFast(mapSource, 'WFA_' + gender, ageDays, false); if(wfaData) { waz = computeZ(w, wfaData.L, wfaData.M, wfaData.S); out.rawWaz = waz; }
         let hfaData = getLMSFast(mapSource, 'HFA_' + gender, ageDays, false); if(hfaData) { haz = computeZ(h, hfaData.L, hfaData.M, hfaData.S); out.rawHaz = haz; }
         let whzMapId = ageDays < 731 ? ('WFL_' + gender) : ('WFH_' + gender);
@@ -148232,12 +148415,10 @@
             return out; 
         }
 
-        // 1. Force strict 2-decimal rounding BEFORE ANY LOGIC evaluates
         let wazR = Number(waz.toFixed(2));
         let hazR = Number(haz.toFixed(2));
         let whzR = Number(whz.toFixed(2));
 
-        // 2. Set Status Strings using the strictly rounded values
         let wazStat = wazR < -3.00 ? "Severely Underweight" : wazR < -2.00 ? "Moderately Underweight" : "Normal";
         let hazStat = hazR < -3.00 ? "Severely Stunted" : hazR < -2.00 ? "Moderately Stunted" : "Normal";
         let whzStat = whzR < -3.00 ? "SAM" : whzR < -2.00 ? "MAM" : whzR >= 2.00 ? "Obese" : "Normal";
@@ -148246,13 +148427,11 @@
         out.hazZ = haz.toFixed(2); out.hazS = hazStat;
         out.whzZ = whz.toFixed(2); out.whzS = whzStat;
 
-        // 3. Establish binary clinical flags based STRICTLY on -2.00 and +2.00 boundaries
         const isUnderweight = (wazR < -2.00);
         const isStunted     = (hazR < -2.00);
         const isWasted      = (whzR < -2.00);
         const isOverweight  = (whzR >= 2.00);
 
-        // 4. Evaluate the combinatorial categories (A through J) SIMULTANEOUSLY
         let dbi = "Error";
         if (!isUnderweight && !isStunted && !isWasted && !isOverweight) dbi = "A (Normal)";
         else if (!isUnderweight && !isStunted &&  isWasted) dbi = "B (Only Wasting)";
@@ -148302,7 +148481,6 @@
         setTimeout(() => scrollCont.scrollTop = scrollCont.scrollHeight, 50);
     }
 
-    // --- BULK CSV PROCESSING VIA WEB WORKER O(1) ENGINE ---
     function processCSV() {
         const fileInput = document.getElementById('csvFileInput');
         if (!fileInput.files.length) return alert("Please choose a CSV file first.");
@@ -148312,16 +148490,12 @@
         prog.innerHTML = "⏳ Reading and Parsing CSV file... Please wait.";
         prog.style.color = "#d32f2f";
 
-        // --- THE CLEAN SLATE FIX ---
-        // 1. Wipe the visual table completely clean
         document.getElementById('tableBody').innerHTML = '';
-        // 2. Wipe the background array completely clean of the initial empty rows
         globalData = []; 
-        // ---------------------------
         
         Papa.parse(file, {
             header: false,
-            skipEmptyLines: 'greedy', // Changed to greedy to prevent trailing commas/blanks
+            skipEmptyLines: 'greedy', 
             complete: function(results) {
                 prog.innerHTML = `⏳ CSV Loaded (${results.data.length} rows). Sending to O(1) background engine...`;
                 setTimeout(() => startWorker(results.data), 100); 
@@ -148470,7 +148644,7 @@
                     if (isFlagged) {
                         counts.Implausible++; 
                         grandTotal++;
-                        return; // Exclude from valid classification counts
+                        return;
                     }
                 }
                 counts[firstChar]++; validTotal++; grandTotal++; 
@@ -148520,7 +148694,6 @@
         });
     }
 
-    // --- POPULATION STATS MATH & RENDERING ENGINE --- //
     function getStatsArr(key, excludeFlags) {
         let all = [], boys = [], girls = [], flags = 0, missing = 0;
         let limitUpper = key === 'rawHaz' ? 6 : 5;
@@ -148882,9 +149055,6 @@
         let csvFile = new Blob([[header, ...csv].join("\n")], { type: "text/csv" }); let downloadLink = document.createElement("a"); downloadLink.download = "DBI_Calculated_Data.csv"; downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
     }
 
-    // =========================================================================
-    // FORMAL PDF REPORT GENERATOR ENGINE
-    // =========================================================================
     function preparePrintReport() {
         document.getElementById('printWazImg').src = document.getElementById('wazChart').toDataURL('image/png');
         document.getElementById('printHazImg').src = document.getElementById('hazChart').toDataURL('image/png');
